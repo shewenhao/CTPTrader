@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -20,12 +20,14 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v120</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v120</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -55,6 +57,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>c.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -77,6 +80,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="ctp.h" />
+    <ClInclude Include="k.h" />
+    <ClInclude Include="kdb_function.h" />
     <ClInclude Include="mdspi.h" />
     <ClInclude Include="strategy.h" />
     <ClInclude Include="StructFunction.h" />
@@ -88,16 +93,19 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ctp.cpp" />
+    <ClCompile Include="kdb_function.cpp" />
     <ClCompile Include="mdspi.cpp" />
     <ClCompile Include="strategy.cpp" />
     <ClCompile Include="StructFunction.cpp" />
     <ClCompile Include="traderspi.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="c.dll" />
     <None Include="thostmduserapi.dll" />
     <None Include="thosttraderapi.dll" />
   </ItemGroup>
   <ItemGroup>
+    <Library Include="c.lib" />
     <Library Include="thostmduserapi.lib" />
     <Library Include="thosttraderapi.lib" />
   </ItemGroup>
