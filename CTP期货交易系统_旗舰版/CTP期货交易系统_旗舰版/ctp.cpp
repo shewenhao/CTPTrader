@@ -52,9 +52,7 @@ int main(int argc, const char* argv[])
 	CtpMdSpi* pUserSpi_md = new CtpMdSpi(pUserApi_md);//创建回调处理类对象MdSpi
 	pUserApi_md->RegisterSpi(pUserSpi_md);// 回调对象注入接口类
 	pUserApi_md->RegisterFront(readMessage.m_mdFront);// 注册行情前置地址	
-
 	pUserSpi_md->setAccount(readMessage.m_appId, readMessage.m_userId, readMessage.m_passwd);//经纪公司编号，用户名，密码
-
 	pUserSpi_md->setInstId(readMessage.m_read_contract);//MD所需订阅行情的合约，即策略交易的合约
 
 
@@ -66,9 +64,7 @@ int main(int argc, const char* argv[])
 	pUserApi_trade->SubscribePublicTopic(THOST_TERT_RESTART);// 注册公有流
 	pUserApi_trade->SubscribePrivateTopic(THOST_TERT_QUICK);// 注册私有流THOST_TERT_QUICK
 	pUserApi_trade->RegisterFront(readMessage.m_tradeFront);// 注册交易前置地址
-
-	pUserSpi_trade->setAccount(readMessage.m_appId, readMessage.m_userId, readMessage.m_passwd);//经纪公司编号，用户名，密码
-	
+	pUserSpi_trade->setAccount(readMessage.m_appId, readMessage.m_userId, readMessage.m_passwd);//经纪公司编号，用户名，密码	
 	pUserSpi_trade->setInstId(readMessage.m_read_contract);//策略交易的合约
 
 	g_pUserSpi_tradeAll = pUserSpi_trade;//全局的TD回调处理类对象，人机交互函数需用到
