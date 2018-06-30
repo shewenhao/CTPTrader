@@ -1,15 +1,17 @@
 #include "strategy.h"
 #include <fstream>
+#include "kdb_function.h"
 
 
 using namespace std;
+using namespace kdb;
 
+kdb::Connector kdbConnectior;
 
 void Strategy::OnTickData(CThostFtdcDepthMarketDataField *pDepthMarketData)
 {	
 	//计算账户的盈亏信息
 	CalculateEarningsInfo(pDepthMarketData);
-
 
 	if(strcmp(pDepthMarketData->InstrumentID, m_instId) == 0)
 	{
@@ -27,19 +29,18 @@ void Strategy::OnTickData(CThostFtdcDepthMarketDataField *pDepthMarketData)
 		//开仓平仓（策略主逻辑的计算）
 		StrategyCalculate(pDepthMarketData);
 
-
+		DataInsertToKDB(pDepthMarketData);
 	}
-
-
 }
 
 
 
 //设置交易的合约代码
-void Strategy::setInstId(string instId)
+void Strategy::Init(string instId, int kdbPort)
 {
 	strcpy_s(m_instId, instId.c_str());
-
+	kdbConnectior.connect("localhost", kdbPort);	
+	kdb::Result res = kdbConnectior.sync("CTPQuote:([] Date:();`symbol$Symbol:(); `float$Leg1Bid1:(); `float$Leg1Ask1:(); `float$Leg2Bid1:();`float$Leg2Ask1:())");
 }
 
 
@@ -201,7 +202,6 @@ void Strategy::SaveDataVec(CThostFtdcDepthMarketDataField *pDepthMarketData)
 	futureData.sell1vol = sell1vol;
 	futureData.vol = vol;
 	futureData.openinterest = openinterest;
-
 	m_futureData_vec.push_back(futureData);	
 
 }
@@ -261,4 +261,37 @@ void Strategy::GetHistoryData()
 
 	cout<<"K线条数:"<<history_data_vec.size()<<endl;
 
+}
+
+//存数据到kdb
+void Strategy::DataInsertToKDB(CThostFtdcDepthMarketDataField *pDepthMarketData)
+{
+	string insertstring;
+	string date = pDepthMarketData->TradingDay;
+	string datesplit = "D";
+	string time = pDepthMarketData->UpdateTime;
+	string symbol = pDepthMarketData->InstrumentID;
+	double buy1price = pDepthMarketData->BidPrice1;
+	double sell1price = pDepthMarketData->AskPrice1;
+
+	insertstring.append("`CTPQuote insert (");
+	insertstring.append(date.substr(0, 4) + ".");
+	insertstring.append(date.substr(4, 2) + ".");
+	insertstring.append(date.substr(6, 2));
+	insertstring.append(datesplit);
+	insertstring.append(time);
+	insertstring.append(";");
+	insertstring.append("`");
+	insertstring.append(symbol);
+	insertstring.append(";");
+	insertstring.append(to_string(buy1price));
+	insertstring.append(";");
+	insertstring.append(to_string(sell1price));
+	insertstring.append(";");
+	insertstring.append(to_string(buy1price));
+	insertstring.append(";");
+	insertstring.append(to_string(sell1price));
+	insertstring.append(")");
+	
+	kdbConnectior.sync(insertstring.c_str());
 }

@@ -4,6 +4,11 @@
 #include "ThostFtdcUserApiStruct.h"
 #include <string>
 #include <iostream>
+#ifndef KXVER
+#define KXVER 3
+#include "k.h"
+#include "kdb_function.h"
+#endif
 
 using namespace std;
 

@@ -15,17 +15,16 @@ class Strategy
 {
 public:
 	Strategy(CtpTraderSpi* TDSpi):TDSpi_stgy(TDSpi)
-	{
+	{		
 		m_allow_open = false;
 		GetHistoryData();
-
 	}
 
 	//行情回调函数，每收到一笔行情就触发一次
 	void OnTickData(CThostFtdcDepthMarketDataField *pDepthMarketData);
 
 	//设置交易的合约代码
-	void setInstId(string instId);
+	void Init(string instId, int kdbPort);
 	
 	//策略主逻辑的计算，70条行情里涨了0.6元，则做多，下跌则做空（系统默认禁止开仓，可在界面输入"yxkc"来允许开仓）
 	void StrategyCalculate(CThostFtdcDepthMarketDataField *pDepthMarketData);
@@ -47,6 +46,9 @@ public:
 	
 	//读取历史数据
 	void GetHistoryData();
+
+	//存数据到kdb
+	void DataInsertToKDB(CThostFtdcDepthMarketDataField *pDepthMarketData);
 
 
 private:

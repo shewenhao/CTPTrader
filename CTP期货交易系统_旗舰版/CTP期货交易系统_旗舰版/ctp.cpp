@@ -19,11 +19,8 @@
 #include <string>
 #include <cstdio>
 
-#ifndef KXVER
-#define KXVER 3
-#endif
-#include "k.h"
-#include "kdb_function.h"
+
+
 
 
 int requestId=0;//请求编号
@@ -48,14 +45,14 @@ int main(int argc, const char* argv[])
 
 	SetConsoleTitle("CTP期货交易系统_旗舰版");
 
-	kdb::Connector kconnector;
-	if (!kconnector.connect("localhost", 5000))
+	//kdb::Connector kconnector;
+	/*if (!kconnector.connect("localhost", 5000))
 		return -1;
 	kdb::Result res = kconnector.sync("Quote:([] Date:(); `float$Leg1Bid1:(); `float$Leg1Ask1:(); `float$Leg2Bid1:();`float$Leg2Ask1:())");
-	kconnector.sync("`Quote insert (2018.08.08D08:08:08.888;1.0;1.2;2.0;2.2)");
-	g_hEvent = CreateEvent(NULL, true, false, NULL);
+	kconnector.sync("`Quote insert (2018.08.08D08:08:08.888;1.0;1.2;2.0;2.2)");*/
+	//g_hEvent = CreateEvent(NULL, true, false, NULL);
 
-	SetConsoleTitle("CTP期货交易系统_旗舰版");
+	//SetConsoleTitle("CTP期货交易系统_旗舰版");
 	//--------------读取配置文件，获取账户信息、服务器地址、交易的合约代码--------------
 	ReadMessage readMessage;
 	memset(&readMessage, 0, sizeof(readMessage));
@@ -89,7 +86,7 @@ int main(int argc, const char* argv[])
 
 	//--------------创建策略实例--------------------------------------------------------
 	g_strategy = new Strategy(pUserSpi_trade);
-	g_strategy->setInstId(readMessage.m_read_contract);
+	g_strategy->Init(readMessage.m_read_contract, 5000);
 
 
 
