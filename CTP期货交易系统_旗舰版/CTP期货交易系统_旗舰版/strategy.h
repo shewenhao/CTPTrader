@@ -8,6 +8,11 @@
 #include <iostream>
 #include <map>
 #include "traderspi.h"
+#include <chrono>  // chrono::system_clock
+#include <ctime>   // localtime
+#include <sstream> // stringstream
+#include <iomanip> // put_time
+
 
 
 
@@ -49,6 +54,8 @@ public:
 
 	//´æÊý¾Ýµ½kdb
 	void DataInsertToKDB(CThostFtdcDepthMarketDataField *pDepthMarketData);
+
+	std::string return_current_time_and_date();
 
 
 private:
