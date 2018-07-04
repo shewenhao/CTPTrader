@@ -4,6 +4,12 @@
 #include "ThostFtdcUserApiStruct.h"
 #include <string>
 #include <iostream>
+#include <thread>
+#include <functional>
+#include <chrono>  // chrono::system_clock
+#include <ctime>   // localtime
+#include <sstream> // stringstream
+#include <iomanip>
 #ifndef KXVER
 #define KXVER 3
 #include "k.h"
@@ -11,6 +17,7 @@
 #endif
 
 using namespace std;
+using namespace kdb;
 
 
 //保存读取的信息的结构体
@@ -24,11 +31,81 @@ struct ReadMessage
 	char m_tradeFront[50];//交易服务器地址
 
 	string m_read_contract;//合约代码
+
+	
 };
 
+kdb::Connector kdbConnectorSetGet;
+string kdbDataSetPath;
+string kdbDataGetPath;
 
+string ExePath() {
+	char buffer[MAX_PATH];
+	GetModuleFileName(NULL, buffer, MAX_PATH);
+	string::size_type pos = string(buffer).find_last_of("\\/");
+	return string(buffer).substr(0, pos);
+}
 
-void SetMessage(ReadMessage& readMessage)//要用引用
+string replace(std::string& str, const std::string& from, const std::string& to) {
+	size_t start_pos = str.find(from);
+	if (start_pos == std::string::npos)
+		return false;
+	str.replace(start_pos, from.length(), to);
+	return str;
+}
+
+string replaceAll(std::string& str, const std::string& from, const std::string& to) {
+	if (from.empty())
+		return str;
+	size_t start_pos = 0;
+	while ((start_pos = str.find(from, start_pos)) != std::string::npos) {
+		str.replace(start_pos, from.length(), to);
+		start_pos += to.length(); // In case 'to' contains 'from', like replacing 'x' with 'yx'
+	}
+	return str;
+}
+
+void kdbSetData()
+{
+	kdbConnectorSetGet.sync("Quote:-500000#select from Quote;");
+	kdbConnectorSetGet.sync("delete from `Quote where Date.minute > 02:30:00, Date.minute <= 09:00:00;delete from `Quote where Date.minute > 11:30:00, Date.minute < 13:00:00;delete from `Quote where Date.minute > 15:15:00, Date.minute < 21:00:00; ");
+	kdbConnectorSetGet.sync(kdbDataSetPath.c_str());
+}
+
+void kdbGetData()
+{
+	kdbConnectorSetGet.sync(kdbDataGetPath.c_str());
+}
+
+string return_current_time_and_date1()
+{
+	auto now = std::chrono::system_clock::now();
+	auto in_time_t = std::chrono::system_clock::to_time_t(now);
+
+	std::stringstream ss;
+	ss << std::put_time(std::localtime(&in_time_t), "%Y.%m.%dD%X");
+	auto duration = now.time_since_epoch();
+
+	typedef std::chrono::duration<int, std::ratio_multiply<std::chrono::hours::period, std::ratio<8>
+	>::type> Days; /* UTC: +8:00 */
+	Days days = std::chrono::duration_cast<Days>(duration);
+	duration -= days;
+	auto hours = std::chrono::duration_cast<std::chrono::hours>(duration);
+	duration -= hours;
+	auto minutes = std::chrono::duration_cast<std::chrono::minutes>(duration);
+	duration -= minutes;
+	auto seconds = std::chrono::duration_cast<std::chrono::seconds>(duration);
+	duration -= seconds;
+	auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(duration);
+	duration -= milliseconds;
+	auto microseconds = std::chrono::duration_cast<std::chrono::microseconds>(duration);
+	duration -= microseconds;
+	auto nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(duration);
+	cout << (ss.str()).append(".").append(to_string(milliseconds.count())) << endl;
+	return (ss.str()).append(".").append(to_string(milliseconds.count()));
+}
+
+void SetMessage(ReadMessage& readMessage, int kdbPort)//要用引用
 {
 	//-------------------------------读取账号模块-------------------------------
 	CString read_brokerID;
@@ -62,8 +139,24 @@ void SetMessage(ReadMessage& readMessage)//要用引用
 	GetPrivateProfileString("Contract","contract","contract_error",read_contract.GetBuffer(MAX_PATH),MAX_PATH,"./input/AccountParam.ini");
 	
 	readMessage.m_read_contract = (LPCTSTR)read_contract;
-	
+	kdbConnectorSetGet.connect("localhost", kdbPort);
+	kdbDataSetPath = ExePath(); kdbDataSetPath = kdbDataSetPath.substr(0, kdbDataSetPath.find("CTPTrader")); kdbDataSetPath = replaceAll(kdbDataSetPath, "\\", "/"); kdbDataGetPath = "Quote: get `:" + kdbDataSetPath + "CTPTrader/Quote;"; kdbDataSetPath = "`:" + kdbDataSetPath + "CTPTrader/Quote set Quote; ";
+	kdbGetData();
 }
+
+void timer_start(std::function<void(void)> func, unsigned int interval)
+{
+	std::thread([func, interval]()
+	{
+		while (true)
+		{
+			auto x = std::chrono::steady_clock::now() + std::chrono::milliseconds(interval);
+			func();
+			std::this_thread::sleep_until(x);
+		}
+	}).detach();
+}
+
 
 
 
