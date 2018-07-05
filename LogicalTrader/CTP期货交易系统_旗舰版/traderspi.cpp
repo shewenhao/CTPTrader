@@ -28,6 +28,9 @@ void CtpTraderSpi::OnFrontConnected()
 {
 	cerr<<"Trader Init()调用成功"<<"Trader 连接交易前置...成功"<<endl;
 
+	//配置品种开平规则
+	define_TThostFtdcCombOffsetFlagType();
+
 	//登录期货账号
 	ReqUserLogin(m_appId, m_userId, m_passwd);
 
@@ -90,7 +93,6 @@ void CtpTraderSpi::OnRspSettlementInfoConfirm(
 	CThostFtdcSettlementInfoConfirmField  *pSettlementInfoConfirm, 
 	CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
-
 	if( !IsErrorRspInfo(pRspInfo) && pSettlementInfoConfirm){
 
 		cerr<<" 响应 | 结算单..."<<pSettlementInfoConfirm->InvestorID
@@ -101,13 +103,8 @@ void CtpTraderSpi::OnRspSettlementInfoConfirm(
 		cerr<<"结算单确认正常，首次查询报单:"<<endl;
 		Sleep(3000);//可适当增加暂停时间，让CTP柜台有充足的响应时间，然后才开始进行查询操作		
 		ReqQryOrder();
-
-
 	}
-
-
 	if(bIsLast) SetEvent(g_hEvent);
-
 }
 
 
@@ -374,44 +371,73 @@ void CtpTraderSpi::OnRspQryInvestorPosition(
 				trade_message_p->instId = pInvestorPosition->InstrumentID;
 
 				m_trade_message_map.insert(pair<string, trade_message*> (pInvestorPosition->InstrumentID, trade_message_p));
+
+
+				m_trade_message_map[pInvestorPosition->InstrumentID]->holding_long = 0;
+
+				//多单今仓
+				m_trade_message_map[pInvestorPosition->InstrumentID]->TodayPosition_long = 0;
+
+				//多单昨仓 = 多单持仓量 - 多单今仓
+				m_trade_message_map[pInvestorPosition->InstrumentID]->YdPosition_long = 0;
+
+				//多单平仓盈亏
+				m_trade_message_map[pInvestorPosition->InstrumentID]->closeProfit_long = 0;
+
+				//多单浮动盈亏(其实是持仓盈亏，按昨结算的)
+				m_trade_message_map[pInvestorPosition->InstrumentID]->OpenProfit_long = 0;
+
+				m_trade_message_map[pInvestorPosition->InstrumentID]->holding_short = 0;
+
+				//空单今仓
+				m_trade_message_map[pInvestorPosition->InstrumentID]->TodayPosition_short = 0;
+
+				//空单昨仓 = 空单持仓量 - 空单今仓
+				m_trade_message_map[pInvestorPosition->InstrumentID]->YdPosition_short = 0;
+
+				//空单平仓盈亏
+				m_trade_message_map[pInvestorPosition->InstrumentID]->closeProfit_short = 0;
+
+				//空单浮动盈亏
+				m_trade_message_map[pInvestorPosition->InstrumentID]->OpenProfit_short = 0;
 			}
 
 
 			if(pInvestorPosition->PosiDirection == '2')//多单
 			{
 				//多单持仓量
-				m_trade_message_map[pInvestorPosition->InstrumentID]->holding_long = pInvestorPosition->Position;
+				m_trade_message_map[pInvestorPosition->InstrumentID]->holding_long += pInvestorPosition->Position;
 
 				//多单今仓
-				m_trade_message_map[pInvestorPosition->InstrumentID]->TodayPosition_long = pInvestorPosition->TodayPosition;
+				m_trade_message_map[pInvestorPosition->InstrumentID]->TodayPosition_long += pInvestorPosition->TodayPosition;
 
 				//多单昨仓 = 多单持仓量 - 多单今仓
 				//m_trade_message_map[pInvestorPosition->InstrumentID]->YdPosition_long = pInvestorPosition->Position - m_trade_message_map[pInvestorPosition->InstrumentID]->TodayPosition_long;//也可以
-				m_trade_message_map[pInvestorPosition->InstrumentID]->YdPosition_long = pInvestorPosition->Position - pInvestorPosition->TodayPosition;
+				m_trade_message_map[pInvestorPosition->InstrumentID]->YdPosition_long += pInvestorPosition->Position - pInvestorPosition->TodayPosition;
 
 				//多单平仓盈亏
-				m_trade_message_map[pInvestorPosition->InstrumentID]->closeProfit_long =  pInvestorPosition->CloseProfit;
+				m_trade_message_map[pInvestorPosition->InstrumentID]->closeProfit_long +=  pInvestorPosition->CloseProfit;
 
 				//多单浮动盈亏(其实是持仓盈亏，按昨结算的)
-				m_trade_message_map[pInvestorPosition->InstrumentID]->OpenProfit_long = pInvestorPosition->PositionProfit;
+				m_trade_message_map[pInvestorPosition->InstrumentID]->OpenProfit_long += pInvestorPosition->PositionProfit;
 
 			}
 			else if(pInvestorPosition->PosiDirection == '3')//空单
 			{
 				//空单持仓量
-				m_trade_message_map[pInvestorPosition->InstrumentID]->holding_short = pInvestorPosition->Position;
+				m_trade_message_map[pInvestorPosition->InstrumentID]->holding_short += pInvestorPosition->Position;
 
 				//空单今仓
-				m_trade_message_map[pInvestorPosition->InstrumentID]->TodayPosition_short = pInvestorPosition->TodayPosition;
+				m_trade_message_map[pInvestorPosition->InstrumentID]->TodayPosition_short += pInvestorPosition->TodayPosition;
 
 				//空单昨仓 = 空单持仓量 - 空单今仓
-				m_trade_message_map[pInvestorPosition->InstrumentID]->YdPosition_short = pInvestorPosition->Position - m_trade_message_map[pInvestorPosition->InstrumentID]->TodayPosition_short;
+				m_trade_message_map[pInvestorPosition->InstrumentID]->YdPosition_short += pInvestorPosition->Position - m_trade_message_map[pInvestorPosition->InstrumentID]->TodayPosition_short;
 
 				//空单平仓盈亏
-				m_trade_message_map[pInvestorPosition->InstrumentID]->closeProfit_short = pInvestorPosition->CloseProfit;
+				m_trade_message_map[pInvestorPosition->InstrumentID]->closeProfit_short += pInvestorPosition->CloseProfit;
 
 				//空单浮动盈亏
-				m_trade_message_map[pInvestorPosition->InstrumentID]->OpenProfit_short = pInvestorPosition->PositionProfit;
+				m_trade_message_map[pInvestorPosition->InstrumentID]->OpenProfit_short += pInvestorPosition->PositionProfit;
 			}
 
 			if (bIsLast)
@@ -1706,7 +1732,6 @@ int CtpTraderSpi::SendHolding_long(string instID)
 }
 
 
-
 int CtpTraderSpi::SendHolding_short(string instID)
 {
 	if(m_trade_message_map.count(instID) == 0)
@@ -1716,11 +1741,104 @@ int CtpTraderSpi::SendHolding_short(string instID)
 
 }
 
-int CtpTraderSpi::SendHolding_short(string instID)
+int CtpTraderSpi::SendTodayHolding_long(string instID)
+{
+	//cerr<<"m_trade_message_map.count(instID):"<<m_trade_message_map.count(instID)<<endl;
+
+	if (m_trade_message_map.count(instID) == 0)
+		return 0;
+	else
+		return m_trade_message_map[instID]->TodayPosition_long;
+
+}
+
+int CtpTraderSpi::SendTodayHolding_short(string instID)
 {
 	if (m_trade_message_map.count(instID) == 0)
 		return 0;
 	else
-		return m_trade_message_map[instID]->holding_short;
+		return m_trade_message_map[instID]->TodayPosition_short;
 
+}
+
+int CtpTraderSpi::SendYdHolding_long(string instID)
+{
+	//cerr<<"m_trade_message_map.count(instID):"<<m_trade_message_map.count(instID)<<endl;
+
+	if (m_trade_message_map.count(instID) == 0)
+		return 0;
+	else
+		return m_trade_message_map[instID]->YdPosition_long;
+
+}
+
+int CtpTraderSpi::SendYdHolding_short(string instID)
+{
+	if (m_trade_message_map.count(instID) == 0)
+		return 0;
+	else
+		return m_trade_message_map[instID]->YdPosition_short;
+
+}
+
+void  CtpTraderSpi::define_TThostFtdcCombOffsetFlagType()
+{
+	m_symbol_order_type_map.insert(pair<string, string>("IF", "CLOSE_IF_TODAYPOS_OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("IH", "CLOSE_IF_TODAYPOS_OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("IC", "CLOSE_IF_TODAYPOS_OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("TF", "CLOSE_OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("T1", "CLOSE_OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("au", "CLOSE_TODAY_YD_OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("ag", "CLOSE_TODAY_YD_OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("cu", "CLOSE_TODAY_YD_OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("al", "CLOSE_TODAY_YD_OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("zn", "CLOSE_TODAY_YD_OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("pb", "CLOSE_TODAY_YD_OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("ni", "CLOSE_TODAY_YD_OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("sn", "CLOSE_TODAY_YD_OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("jm", "CLOSE_IF_TODAYPOS_OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("j1", "CLOSE_IF_TODAYPOS_OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("ZC", "CLOSE__OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("rb", "CLOSE_TODAY_YD_OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("i1", "CLOSE_IF_TODAYPOS_OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("hc", "CLOSE_TODAY_YD_OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("SF", "CLOSE__OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("SM", "CLOSE__OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("FG", "CLOSE__OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("fu", "CLOSE_TODAY_YD_OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("sc", "CLOSE_TODAY_YD_OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("ru", "CLOSE_TODAY_YD_OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("l1", "CLOSE__OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("TA", "CLOSE__OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("v1", "CLOSE__OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("MA", "CLOSE__OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("pp", "CLOSE__OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("bu", "CLOSE__OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("a1", "CLOSE__OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("b1", "CLOSE__OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("WH", "CLOSE__OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("c1", "CLOSE__OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("RI", "CLOSE__OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("JR", "CLOSE__OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("LR", "CLOSE__OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("RS", "CLOSE__OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("m1", "CLOSE__OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("RM", "CLOSE__OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("y1", "CLOSE__OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("OI", "CLOSE__OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("p1", "CLOSE__OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("CF", "CLOSE__OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("SR", "CLOSE__OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("CY", "CLOSE__OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("jd", "CLOSE__OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("cs", "CLOSE__OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("AP", "CLOSE__OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("fb", "CLOSE__OPEN"));
+	m_symbol_order_type_map.insert(pair<string, string>("bb", "CLOSE__OPEN"));
+}
+
+
+string CtpTraderSpi::Send_TThostFtdcCombOffsetFlagType(string instID)
+{
+	return m_symbol_order_type_map[instID];
 }

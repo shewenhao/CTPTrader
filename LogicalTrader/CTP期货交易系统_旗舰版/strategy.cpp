@@ -11,6 +11,8 @@ string m_kdbScript = "ARB_IAD_V2T1_[sn_SN3M]_1_200_HIT.q";
 int m_ShortLongInitNum = 0;
 int m_ReadShortLongInitNum = 0;
 int m_ReadShortLongSignal = 0;
+TThostFtdcVolumeType m_VolumeTarget = 1;
+int m_OrderVolumeMultiple = 2;
 
 void Strategy::OnTickData(CThostFtdcDepthMarketDataField *pDepthMarketData)
 {	
@@ -44,15 +46,27 @@ void Strategy::Init(string instId, int kdbPort, string kdbScrpit)
 {
 	strcpy_s(m_instId, instId.c_str());
 	kdbConnector.connect("localhost", kdbPort);	
-	std::string kdb_init_string = "h:hopen `::5000;PairFormula:{(x%y)};f:{x%y};bollingerBands: {[k;n;data]      movingAvg: mavg[n;data];    md: sqrt mavg[n;data*data]-movingAvg*movingAvg;      movingAvg+/:(k*-1 0 1)*\\:md};ReceiveTimeToDate:{(\"\"z\"\" $ 1970.01.01+ floor x %86400000000 )+ 08:00:00.000 +\"\"j\"\"$ 0.001* x mod  86400000000};";
+	std::string kdb_init_string = "h:hopen `::5000;PairFormula:{(x%y)};f:{x%y};bollingerBands: {[k;n;data]      movingAvg: mavg[n;data];    md: sqrt mavg[n;data*data]-movingAvg*movingAvg;      movingAvg+/:(k*-1 0 1)*\\:md};ReceiveTimeToDate:{(\"\"z\"\" $ 1970.01.01+ floor x %86400000000 )+ 08:00:00.000 +\"\"j\"\"$ 0.001* x mod  86400000000};isTable:{if[98h=type x;:1b];if[99h=type x;:98h=type key x];0b};isTable2: {@[{isTable value x}; x; 0b]}; ";
 	kdbConnector.sync(kdb_init_string.c_str());
 	m_kdbScript = kdbScrpit + m_kdbScript;
 	////////////////////////////////////////////////////
 	/////第一次启动需要手动加载表                  //////
 	///////////////////////////////////////////////////
-	//kdbConnector.sync("FinalSignal::();");
-	kdb::Result res = kdbConnector.sync("exec count Signal from ShortLong");
-	m_ShortLongInitNum = res.res_->j;
+	kdb::Result res = kdbConnector.sync("isTable2 `ShortLong");
+	//如果表格不存在设置初始信号为0
+	if (res.res_->g)
+	{
+		res = kdbConnector.sync("exec count Signal from ShortLong");
+		m_ShortLongInitNum = res.res_->j;
+	}
+	else
+	{
+		kdbConnector.sync("FinalSignal:([] Date:(); ReceiveDate:(); Symbol:(); LegOneBidPrice1:(); LegOneBidVol1:(); LegOneAskPrice1:(); LegOneAskVol1:(); LegTwoBidPrice1:(); LegTwoBidVol1:(); LegTwoAskPrice1:(); LegTwoAskVol1:(); LegThreeBidPrice1:(); LegThreeBidVol1:(); LegThreeAskPrice1:(); LegThreeAskVol1:(); BidPrice1:(); BidVol1:(); AskPrice1:(); AskVol:(); LowerBand:(); HigherBand:(); Signal:());");
+		kdbConnector.sync(m_kdbScript.c_str());
+		m_ShortLongInitNum = 0;
+	}
+
+
 }
 
 
@@ -61,8 +75,13 @@ void Strategy::Init(string instId, int kdbPort, string kdbScrpit)
 void Strategy::StrategyCalculate(CThostFtdcDepthMarketDataField *pDepthMarketData)
 {
 	TThostFtdcInstrumentIDType    instId;//合约,合约代码在结构体里已经有了
+	strcpy_s(instId, m_instId);
+	string instIDString = instId;
+	string order_type = TDSpi_stgy->Send_TThostFtdcCombOffsetFlagType(instIDString.substr(0,2));
+	
+
 	TThostFtdcDirectionType       dir;//方向,'0'买，'1'卖
-	TThostFtdcCombOffsetFlagType  kpp;//开平，"0"开，"1"平,"3"平今
+	TThostFtdcCombOffsetFlagType  kpp = "8";//开平，"0"开，"1"平,"3"平今
 	TThostFtdcPriceType           price;//价格，0是市价,上期所不支持
 	TThostFtdcVolumeType          vol;//数量
 
@@ -75,24 +94,30 @@ void Strategy::StrategyCalculate(CThostFtdcDepthMarketDataField *pDepthMarketDat
 		m_ShortLongInitNum = m_ReadShortLongInitNum;
 		kdb::Result res = kdbConnector.sync("exec last Signal from ShortLong");
 		m_ReadShortLongSignal = res.res_->j;
+
+		if (m_ReadShortLongInitNum == 1)
+		{
+			m_OrderVolumeMultiple = 1;
+		}
+		else
+		{
+			m_OrderVolumeMultiple = 2;
+		}
+
 		if (m_ReadShortLongSignal > 0)
 		{
-			strcpy_s(instId, m_instId);
 			dir = '0';
-			strcpy_s(kpp, "0");
 			price = pDepthMarketData->AskPrice1;
-			vol = 1;
+			vol = m_VolumeTarget * m_OrderVolumeMultiple;
+			SendCorrectOrderOnSymbol(instId, order_type, dir, &kpp, price, vol);
 		}
 		else if (m_ReadShortLongSignal < 0)
 		{
-			strcpy_s(instId, m_instId);
 			dir = '1';
-			strcpy_s(kpp, "0");
 			price = pDepthMarketData->BidPrice1;
-			vol = 1;
+			vol = m_VolumeTarget * m_OrderVolumeMultiple;
+			SendCorrectOrderOnSymbol(instId, order_type, dir, &kpp, price, vol);
 		}
-		TDSpi_stgy->ReqOrderInsert(instId, dir, kpp, price, vol);
-		
 	}
 
 	#pragma region strategyTemplate
@@ -369,4 +394,41 @@ string  Strategy::return_current_time_and_date()
 	auto nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(duration);
 	cout << (ss.str()).append(".").append(to_string(milliseconds.count())) << endl;
 	return (ss.str()).append(".").append(to_string(milliseconds.count()));
+}
+
+void Strategy::SendCorrectOrderOnSymbol(TThostFtdcInstrumentIDType    instId, string order_type, TThostFtdcDirectionType dir, TThostFtdcCombOffsetFlagType * kpp, TThostFtdcPriceType price, TThostFtdcVolumeType vol)
+{
+	if (order_type == "CLOSE_TODAY_YD_OPEN")
+	{
+		if (dir == '0')
+		{
+			if (vol <= TDSpi_stgy->SendTodayHolding_short(instId))
+			{
+				TDSpi_stgy->ReqOrderInsert(instId,  dir, "3", price, vol);
+			}
+			else if (vol <= TDSpi_stgy->SendYdHolding_short(instId))
+			{
+				TDSpi_stgy->ReqOrderInsert(instId, dir, "1", price, vol);
+			}
+			else if (vol > TDSpi_stgy->SendYdHolding_short(instId) && vol > TDSpi_stgy->SendTodayHolding_short(instId))
+			{
+				TDSpi_stgy->ReqOrderInsert(instId, dir, "0", price, vol);
+			}
+		}
+		else if (dir == '1')
+		{
+			if (vol <= TDSpi_stgy->SendTodayHolding_long(instId))
+			{
+				TDSpi_stgy->ReqOrderInsert(instId, dir, "3", price, vol);
+			}
+			else if (vol <= TDSpi_stgy->SendYdHolding_long(instId))
+			{
+				TDSpi_stgy->ReqOrderInsert(instId, dir, "1", price, vol);
+			}
+			else if (vol > TDSpi_stgy->SendYdHolding_long(instId) && vol > TDSpi_stgy->SendTodayHolding_long(instId))
+			{
+				TDSpi_stgy->ReqOrderInsert(instId, dir, "0", price, vol);
+			}
+		}
+	}
 }

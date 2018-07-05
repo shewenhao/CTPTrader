@@ -41,6 +41,7 @@ string kdbDataGetPath;
 string specificFolderPath = "CTPTrader/LogicalTrader/KDB_Scripts/";
 string kdbScriptExePath;
 
+
 string ExePath() {
 	char buffer[MAX_PATH];
 	GetModuleFileName(NULL, buffer, MAX_PATH);

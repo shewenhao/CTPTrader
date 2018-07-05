@@ -57,6 +57,8 @@ public:
 
 	std::string return_current_time_and_date();
 
+	void SendCorrectOrderOnSymbol(TThostFtdcInstrumentIDType    instId, string order_type, TThostFtdcDirectionType dir, TThostFtdcCombOffsetFlagType * kpp, TThostFtdcPriceType price, TThostFtdcVolumeType vol);
+
 
 private:
 
@@ -78,6 +80,7 @@ private:
 
 	vector<History_data> history_data_vec;//保存历史数据的vector
 
+	
 };
 
 #endif

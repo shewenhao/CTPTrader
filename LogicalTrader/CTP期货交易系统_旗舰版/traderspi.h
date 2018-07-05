@@ -165,6 +165,24 @@ public:
 	//返回某合约空单持仓量
 	int SendHolding_short(string instID);
 
+	//返回某合约多单持仓量
+	int SendTodayHolding_long(string instID);
+
+	//返回某合约空单持仓量
+	int SendTodayHolding_short(string instID);
+
+	//返回某合约多单持仓量
+	int SendYdHolding_long(string instID);
+
+	//返回某合约空单持仓量
+	int SendYdHolding_short(string instID);
+
+	//定义品种开平规则
+	void define_TThostFtdcCombOffsetFlagType();
+
+	//返回品种开平规则
+	string Send_TThostFtdcCombOffsetFlagType(string instID);
+
 
 	
 private:
@@ -187,6 +205,8 @@ private:
 	map<string, trade_message*> m_trade_message_map;//合约交易信息结构体的map
 
 	map<string, CThostFtdcInstrumentField*> m_instMessage_map;//保存合约信息的map
+
+	map<string, string> m_symbol_order_type_map;
 	
 	TThostFtdcInstrumentIDType m_instId;//合约代码
 	

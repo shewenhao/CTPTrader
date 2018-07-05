@@ -190,3 +190,29 @@ FinalSignal::();
 ////////////////////////////////////////////////////
 select from MultiplePair where ReceiveDate = min ReceiveDate
 select from MultiplePair where ReceiveDate = max ReceiveDate
+////////////////////////////////////////////////////
+/////手动添加信号                              /////
+////////////////////////////////////////////////////
+temp:select from ShortLong where ReceiveDate = max ReceiveDate;
+update Signal:1 from `temp;
+ShortLong:ShortLong,temp;
+exec Signal from ShortLong where ReceiveDate = min ReceiveDate
+delete from ShortLong
+exec last Signal from ShortLong
+////////////////////////////////////////////////////
+/////手动清理信号                              /////
+////////////////////////////////////////////////////
+delete from `.;
+////////////////////////////////////////////////////
+/////查看表格存在                              /////
+////////////////////////////////////////////////////
+// Check if a variable is a keyed or non-keyed table 
+isTable:{if[98h=type x;:1b];if[99h=type x;:98h=type key x];0b};
+isTable2: {@[{isTable value x};x;0b]};
+isTable [ShortLong]
+isTable2 `ShortLong
+type ShortLong2
+type ShortLong
+meta Signal
+
+FinalSignal:([] Date:(); ReceiveDate:(); Symbol:(); LegOneBidPrice1:(); LegOneBidVol1:(); LegOneAskPrice1:(); LegOneAskVol1:(); LegTwoBidPrice1:(); LegTwoBidVol1:(); LegTwoAskPrice1:(); LegTwoAskVol1:(); LegThreeBidPrice1:(); LegThreeBidVol1:(); LegThreeAskPrice1:(); LegThreeAskVol1:(); BidPrice1:(); BidVol1:(); AskPrice1:(); AskVol:(); LowerBand:(); HigherBand:(); Signal:());
