@@ -13,8 +13,8 @@ void Strategy::OnTickData(CThostFtdcDepthMarketDataField *pDepthMarketData)
 	//计算账户的盈亏信息
 	CalculateEarningsInfo(pDepthMarketData);
 
-	if(strcmp(pDepthMarketData->InstrumentID, m_instId) == 0)
-	{
+	/*if(strcmp(pDepthMarketData->InstrumentID, m_instId) == 0)
+	{*/
 		cerr<<"策略收到行情:"<<pDepthMarketData->InstrumentID<<","<<pDepthMarketData->TradingDay<<","<<pDepthMarketData->UpdateTime<<",最新价:"<<pDepthMarketData->LastPrice<<",涨停价:"<<pDepthMarketData->UpperLimitPrice<<",跌停价:"<<pDepthMarketData->LowerLimitPrice<<endl;
 		
 		//保存数据到vector
@@ -30,7 +30,7 @@ void Strategy::OnTickData(CThostFtdcDepthMarketDataField *pDepthMarketData)
 		StrategyCalculate(pDepthMarketData);
 
 		DataInsertToKDB(pDepthMarketData);
-	}
+	/*}*/
 }
 
 

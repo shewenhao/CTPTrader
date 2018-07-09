@@ -1,3 +1,18 @@
+////////////////////////////////////////////////////
+/////策略端口说明                             //////
+////////////////////////////////////////////////////
+//此类策略集中在90xx端口
+
+
+////////////////////////////////////////////////////
+/////参数设定区域                             //////
+////////////////////////////////////////////////////
+StandardDeviationTimes:1.0;
+WindowFrameLength:200;
+KindleLengthOnSecond:1;
+////////////////////////////////////////////////////
+/////多腿数据合并                             //////
+////////////////////////////////////////////////////
 PairLegOne:   h"-1000#select  Date: Date, ReceiveDate:ReceiveDate, Symbol:Symbol, BidPrice1: BidPrice1, BidVol1:BidVol1, AskPrice1:AskPrice1, AskVol1: AskVol1 from Quote where Symbol = `sn1809";
 PairLegTwo:   h"-1000#select  Date: Date, ReceiveDate:ReceiveDate, Symbol:Symbol, BidPrice1: BidPrice1, BidVol1:BidVol1, AskPrice1:AskPrice1, AskVol1: AskVol1 from Quote where Symbol = `SN3M";
 PairLegThree: h"-1000#select  Date: Date, ReceiveDate:ReceiveDate, Symbol:Symbol, BidPrice1: BidPrice1, BidVol1:BidVol1, AskPrice1:AskPrice1, AskVol1: AskVol1 from Quote where Symbol = `SN3M";
@@ -18,12 +33,18 @@ update BidPrice1:PairFormula[LegOneBidPrice1;LegTwoAskPrice1], BidVol1:1,AskPric
 MultiplePair:select from MultiplePair where LegOneBidPrice1<>0N;
 MultiplePair:select from MultiplePair where LegTwoBidPrice1<>0N;
 MultiplePair:select from MultiplePair where LegThreeBidPrice1<>0N;
-strategyData:delete date,second from select by ReceiveDate.date, 1 xbar ReceiveDate.second from MultiplePair;
+////////////////////////////////////////////////////
+/////信号计算准备                             //////
+////////////////////////////////////////////////////
+strategyData:delete date,second from select by ReceiveDate.date, KindleLengthOnSecond xbar ReceiveDate.second from MultiplePair;
 //MultiplePair:-300#select from MultiplePair;
-update LowerBand:bollingerBands[1;200;BidPrice1][0], HigherBand:bollingerBands[1;200;AskPrice1][2]  from `strategyData;
+update LowerBand:bollingerBands[StandardDeviationTimes;WindowFrameLength;BidPrice1][0], HigherBand:bollingerBands[StandardDeviationTimes;WindowFrameLength;AskPrice1][2]  from `strategyData;
 Signal: strategyData;update Signal:1 from `Signal where AskPrice1 < LowerBand;update Signal:-1 from `Signal where BidPrice1 > HigherBand;
 //Signal:select from Signal where ((Signal = 1) or  (Signal = -1));
 //SignalCount: exec count Signal from Signal;
 //if[(SignalCount>0);SignalLast:-1#select from Signal;FinalSignal:FinalSignal,SignalLast];
+////////////////////////////////////////////////////
+/////策略逻辑判断                             //////
+////////////////////////////////////////////////////
 SignalLast:-1#select from Signal;delete from `SignalLast where Signal = 0N; FinalSignal:FinalSignal,SignalLast;
 ShortLong:select from FinalSignal  where (Signal<>(prev Signal));

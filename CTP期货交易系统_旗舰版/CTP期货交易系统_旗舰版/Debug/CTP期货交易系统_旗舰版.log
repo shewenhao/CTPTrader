@@ -1,12 +1,9 @@
-﻿Build started 2018/7/2 20:00:36.
+﻿Build started 2018/7/6 11:02:34.
      1>Project "D:\Coding_Applications\Codes\Github\CTPTrader\CTP期货交易系统_旗舰版\CTP期货交易系统_旗舰版\CTP期货交易系统_旗舰版.vcxproj" on node 2 (Build target(s)).
      1>ClCompile:
-         D:\Coding_Applications\VisualStudio2013\VC\bin\CL.exe /c /ZI /nologo /W3 /WX- /Od /Oy- /D WIN32 /D _DEBUG /D _CONSOLE /D _MBCS /Gm /EHsc /RTC1 /MTd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Debug\\" /Fd"Debug\vc120.pdb" /Gd /TP /analyze- /errorReport:prompt ctp.cpp
-         ctp.cpp
-     1>d:\coding_applications\visualstudio2013\vc\atlmfc\include\afx.h(38): warning C4996: 'MBCS_Support_Deprecated_In_MFC': MBCS support in MFC is deprecated and may be removed in a future version of MFC.
-                 d:\coding_applications\visualstudio2013\vc\atlmfc\include\afx.h(33) : see declaration of 'MBCS_Support_Deprecated_In_MFC'
-         _WIN32_WINNT not defined. Defaulting to _WIN32_WINNT_MAXVER (see WinSDKVer.h)
-     1>d:\coding_applications\codes\github\ctptrader\ctp期货交易系统_旗舰版\ctp期货交易系统_旗舰版\ctp.h(86): warning C4996: 'localtime': This function or variable may be unsafe. Consider using localtime_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+         D:\Coding_Applications\VisualStudio2013\VC\bin\CL.exe /c /ZI /nologo /W3 /WX- /Od /Oy- /D WIN32 /D _DEBUG /D _CONSOLE /D _MBCS /Gm /EHsc /RTC1 /MTd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Debug\\" /Fd"Debug\vc120.pdb" /Gd /TP /analyze- /errorReport:prompt strategy.cpp
+         strategy.cpp
+     1>d:\coding_applications\codes\github\ctptrader\ctp期货交易系统_旗舰版\ctp期货交易系统_旗舰版\strategy.cpp(310): warning C4996: 'localtime': This function or variable may be unsafe. Consider using localtime_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
                  d:\coding_applications\visualstudio2013\vc\include\time.inl(112) : see declaration of 'localtime'
        Link:
          D:\Coding_Applications\VisualStudio2013\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"D:\Coding_Applications\Codes\Github\CTPTrader\CTP期货交易系统_旗舰版\Debug\CTP期货交易系统_旗舰版.exe" /INCREMENTAL /NOLOGO c.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"D:\Coding_Applications\Codes\Github\CTPTrader\CTP期货交易系统_旗舰版\Debug\CTP期货交易系统_旗舰版.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"D:\Coding_Applications\Codes\Github\CTPTrader\CTP期货交易系统_旗舰版\Debug\CTP期货交易系统_旗舰版.lib" /MACHINE:X86 Debug\ctp.obj
@@ -23,4 +20,4 @@
 
 Build succeeded.
 
-Time Elapsed 00:00:04.16
+Time Elapsed 00:00:02.52

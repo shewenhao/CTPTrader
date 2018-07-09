@@ -216,3 +216,79 @@ type ShortLong
 meta Signal
 
 FinalSignal:([] Date:(); ReceiveDate:(); Symbol:(); LegOneBidPrice1:(); LegOneBidVol1:(); LegOneAskPrice1:(); LegOneAskVol1:(); LegTwoBidPrice1:(); LegTwoBidVol1:(); LegTwoAskPrice1:(); LegTwoAskVol1:(); LegThreeBidPrice1:(); LegThreeBidVol1:(); LegThreeAskPrice1:(); LegThreeAskVol1:(); BidPrice1:(); BidVol1:(); AskPrice1:(); AskVol:(); LowerBand:(); HigherBand:(); Signal:());
+select from Signal where Signal <>0N
+////////////////////////////////////////////////////
+/////ICIHTurtle     init                       /////
+////////////////////////////////////////////////////
+QuoteData:([] Date:();`float$LegOneBidPrice1:();`float$LegOneAskPrice1:();`float$LegTwoBidPrice1:();`float$LegTwoAskPrice1:();`float$PairBidPrice:();`float$PairAskPrice:());
+QuoteData:([] Date:();`float$LegOneBidPrice1:();`float$LegOneAskPrice1:();`float$LegTwoBidPrice1:();`float$LegTwoAskPrice1:();`float$BidPrice1:();`float$AskPrice1:());
+QuoteDataKindle: select Date:last Date,BidPrice1Open:first BidPrice1,BidPrice1High:max BidPrice1,BidPrice1Low:min BidPrice1, BidPrice1Close:last BidPrice1,BidVol1:100,AskPrice1Open:first AskPrice1,AskPrice1High:max AskPrice1,AskPrice1Low:min AskPrice1, AskPrice1Close:last AskPrice1,AskVol1:last 100,LegOneBidPrice1:last LegOneBidPrice1, LegOneAskPrice1:last LegOneAskPrice1, LegTwoBidPrice1:last LegTwoBidPrice1, LegTwoAskPrice1: last LegTwoAskPrice1 by 60 xbar Date.second from QuoteData;
+////////////////////////////////////////////////////
+/////ICIHTurtle    测试增补数据                /////
+////////////////////////////////////////////////////
+temp:select from QuoteDataKindle where Date = min Date;
+QuoteDataKindle:QuoteDataKindle, temp;
+meta QuoteDataKindle
+meta TrailQuoteDataKindle
+PairFormulaDValue:{[x;mx;y;my] (x*mx) - (y*my)};
+PairFormulaDValue[1.2;200;1.2;600]
+PositionAddedTimes:0
+
+
+h:hopen `::5000;
+PairFormula:{(x%y)};
+f:{x%y};bollingerBands: {[k;n;data]      movingAvg: mavg[n;data];    md: sqrt mavg[n;data*data]-movingAvg*movingAvg;      movingAvg+/:(k*-1 0 1)*\\:md};
+ReceiveTimeToDate:{(\"\"z\"\" $ 1970.01.01+ floor x %86400000000 \)+ 08:00:00.000 +\"\"j\"\"$ 0.001* x mod  86400000000};
+
+ 
+ 
+ h:hopen `::5000;PairFormula:{(x%y)};f:{x%y};bollingerBands: {[k;n;data]      movingAvg: mavg[n;data];    md: sqrt mavg[n;data*data]-movingAvg*movingAvg;      movingAvg+/:(k*-1 0 1)*\\:md};;isTable:{if[98h=type x;:1b];if[99h=type x;:98h=type key x];0b};isTable2: {@[{isTable value x}; x; 0b]};isTable:{if[98h=type x;:1b];if[99h=type x;:98h=type key x];0b};isTable2: {@[{isTable value x}; x; 0b]};PairFormulaDValue:{[x;mx;y;my] (x*mx) - (y*my)};PositionAddedTimes:0};
+ 
+ 
+ h:hopen `::5000;PairFormula:{(x%y)};f:{x%y};bollingerBands: {[k;n;data]      movingAvg: mavg[n;data];    md: sqrt mavg[n;data*data]-movingAvg*movingAvg;      movingAvg+/:(k*-1 0 1)*\\:md};;isTable:{if[98h=type x;:1b];if[99h=type x;:98h=type key x];0b};isTable2: {@[{isTable value x}; x; 0b]};isTable:{if[98h=type x;:1b];if[99h=type x;:98h=type key x];0b};isTable2: {@[{isTable value x}; x; 0b]};PairFormulaDValue:{[x;mx;y;my] (x*mx) - (y*my)};PositionAddedTimes:0};
+ 
+ PairFormulaDValue:{[x;mx;y;my] (x*mx) - (y*my)};
+ h:hopen `::5000;PairFormula:{(x%y)};f:{x%y};bollingerBands: {[k;n;data]      movingAvg: mavg[n;data];    md: sqrt mavg[n;data*data]-movingAvg*movingAvg;      movingAvg+/:(k*-1 0 1)*\\:md};;isTable:{if[98h=type x;:1b];if[99h=type x;:98h=type key x];0b};isTable2: {@[{isTable value x}; x; 0b]};isTable:{if[98h=type x;:1b];if[99h=type x;:98h=type key x];0b};isTable2: {@[{isTable value x}; x; 0b]};PairFormulaDValue:{[x;mx;y;my] (x*mx) - (y*my)};
+ 
+ ShortLong::();
+ 
+ select count Signal from ShortLong
+ 
+ ShortLong:select from QuoteDataKindle;update Signal: 0N from `ShortLong;
+ 
+ LocalHigh:-99999999;LocalLow:99999999;
+ DrawBack :0.0;
+ ////////////////////////////////////////////////////
+/////手动清理信号                              /////
+////////////////////////////////////////////////////
+delete from `.;
+
+
+
+CoverShortLong:-2#select  from ShortLong;
+exec first Signal from CoverShortLong;
+
+
+\l D:/Coding_Applications/Codes/Github/CTPTrader/LogicalTrader/KDB_Scripts/TRE_IAD_V2T1_[IC_IH_A50]_K60V50B50N0d5S1d5_HIT_Long
+
+\l D:/Coding_Applications/Codes/Github/CTPTrader/LogicalTrader_Turtle/KDB_Scripts/TRE_IAD_V2T1_[IC_IH_A50]_K60V50B50N0d5S1d5_HIT_Long.q
+
+delete from `ShortLong where Signal = 0;
+
+
+PositionAddedTimes:1;
+TrailShortLong:-1#select from QuoteDataKindle;
+update Signal:1 from `TrailShortLong;
+ShortLong: ShortLong, TrailShortLong;
+
+
+LongEntry:-480000;PositionAddedTimes:4;
+////////////////////////////////////////////////////
+/////三大逻辑判断                             //////
+////////////////////////////////////////////////////
+//根据时间判断是否平仓
+if[(WhetherInCoverTime) and (PositionAddedTimes > 0);PositionAddedTimes:0;TrailShortLong:-1#select from QuoteDataKindle;update Signal:0 from `TrailShortLong;update BidPrice1Open:-450f from `TrailShortLong; ShortLong: ShortLong, TrailShortLong;];
+update second:second + 2000000000 from `TrailShortLong;
+ShortLong: ShortLong, TrailShortLong;
+meta ShortLong
+meta TrailShortLong
