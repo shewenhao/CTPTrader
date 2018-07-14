@@ -49,13 +49,14 @@ void Strategy::Init(string instId, int kdbPort, string kdbScrpit)
 {
 	strcpy_s(m_instId, instId.c_str());
 	kdbConnector.connect("localhost", kdbPort);	
-	std::string kdb_init_string = "h:hopen `::5000;PairFormula:{(x%y)};f:{x%y};bollingerBands: {[k;n;data]      movingAvg: mavg[n;data];    md: sqrt mavg[n;data*data]-movingAvg*movingAvg;      movingAvg+/:(k*-1 0 1)*\\:md};;isTable:{if[98h=type x;:1b];if[99h=type x;:98h=type key x];0b};isTable2: {@[{isTable value x}; x; 0b]};isTable:{if[98h=type x;:1b];if[99h=type x;:98h=type key x];0b};isTable2: {@[{isTable value x}; x; 0b]};PairFormulaDValue:{[x;mx;y;my] (x*mx) - (y*my)};PositionAddedTimes:0;ShortLong::();LocalHigh:-99999999;LocalLow:99999999;DrawBack: 0.0;";
+	std::string kdb_init_string = "h:hopen `::5000;PairFormula:{(x%y)};f:{x%y};bollingerBands: {[k;n;data]      movingAvg: mavg[n;data];    md: sqrt mavg[n;data*data]-movingAvg*movingAvg;      movingAvg+/:(k*-1 0 1)*\\:md};;isTable:{if[98h=type x;:1b];if[99h=type x;:98h=type key x];0b};isTable2: {@[{isTable value x}; x; 0b]};isTable:{if[98h=type x;:1b];if[99h=type x;:98h=type key x];0b};isTable2: {@[{isTable value x}; x; 0b]};PairFormulaDValue:{[x;mx;y;my] (x*mx) - (y*my)};";
+	std::string kdb_init_par_string = "PositionAddedTimes:0;LocalHigh:-99999999;LocalLow:99999999;DrawBack: 0.0;";
 	kdbConnector.sync(kdb_init_string.c_str());
 	m_kdbScript = kdbScrpit + m_kdbScript;
 	////////////////////////////////////////////////////
 	/////第一次启动需要手动加载表                  //////
 	///////////////////////////////////////////////////
-	kdb::Result res = kdbConnector.sync("isTable2 `QuoteDate");
+	kdb::Result res = kdbConnector.sync("isTable2 `QuoteData");
 	//如果表格不存在设置初始信号为0
 	if (res.res_->g)
 	{
@@ -64,6 +65,7 @@ void Strategy::Init(string instId, int kdbPort, string kdbScrpit)
 	}
 	else
 	{
+		kdbConnector.sync(kdb_init_par_string.c_str());
 		kdbConnector.sync("QuoteData:([] Date:();`float$LegOneBidPrice1:();`float$LegOneAskPrice1:();`float$LegTwoBidPrice1:();`float$LegTwoAskPrice1:();`float$BidPrice1:();`float$AskPrice1:());");
 		kdbConnector.sync("QuoteDataKindle: select Date:last Date,BidPrice1Open:first BidPrice1,BidPrice1High:max BidPrice1,BidPrice1Low:min BidPrice1, BidPrice1Close:last BidPrice1,BidVol1:100,AskPrice1Open:first AskPrice1,AskPrice1High:max AskPrice1,AskPrice1Low:min AskPrice1, AskPrice1Close:last AskPrice1,AskVol1:last 100,LegOneBidPrice1:last LegOneBidPrice1, LegOneAskPrice1:last LegOneAskPrice1, LegTwoBidPrice1:last LegTwoBidPrice1, LegTwoAskPrice1: last LegTwoAskPrice1 by 60 xbar Date.second from QuoteData;delete second from `QuoteDataKindle;");
 		kdbConnector.sync("ShortLong:select from QuoteDataKindle;update Signal: 0N from `ShortLong;");
@@ -111,7 +113,7 @@ void Strategy::StrategyCalculate(CThostFtdcDepthMarketDataField *pDepthMarketDat
 		}
 		else if (m_ReadShortLongSignal == 0)
 		{
-			res = kdbConnector.sync("CoverShortLong:-2#select  from ShortLong;exec first Signal from CoverShortLong; ");
+			res = kdbConnector.sync("CoverShortLong:-2#select  from ShortLong;exec first Signal from CoverShortLong");
 			dir = '1';
 			price = pDepthMarketData->BidPrice1;
 			vol = res.res_->j *m_OrderVolumeMultiple;
@@ -438,11 +440,11 @@ void Strategy::SendCorrectOrderOnSymbol(TThostFtdcInstrumentIDType    instId, st
 	{
 		if (dir == '0')
 		{
-			if      (TDSpi_stgy->SendTodayHolding_short(instId) > 0 && m_IndexFuturePositionLimit - TDSpi_stgy->SendTodayHolding_short(instId) - TDSpi_stgy->SendTodayHolding_long(instId) <= vol)
+			if      (TDSpi_stgy->SendTodayHolding_short(instId) > 0 && m_IndexFuturePositionLimit - TDSpi_stgy->SendTodayHolding_short(instId) - TDSpi_stgy->SendTodayHolding_long(instId) >= vol)
 			{
 				TDSpi_stgy->ReqOrderInsert(instId, dir, "0", price, vol);
 			}
-			else if (TDSpi_stgy->SendTodayHolding_short(instId) == 0 && m_IndexFuturePositionLimit - TDSpi_stgy->SendTodayHolding_short(instId) - TDSpi_stgy->SendTodayHolding_long(instId) <= vol)
+			else if (TDSpi_stgy->SendTodayHolding_short(instId) == 0 && m_IndexFuturePositionLimit - TDSpi_stgy->SendTodayHolding_short(instId) - TDSpi_stgy->SendTodayHolding_long(instId) >= vol)
 			{
 				TDSpi_stgy->ReqOrderInsert(instId, dir, "0", price, vol);
 			}
@@ -453,11 +455,11 @@ void Strategy::SendCorrectOrderOnSymbol(TThostFtdcInstrumentIDType    instId, st
 		}
 		else if (dir == '1')
 		{
-			if		(TDSpi_stgy->SendTodayHolding_long(instId) > 0 && m_IndexFuturePositionLimit - TDSpi_stgy->SendTodayHolding_short(instId) - TDSpi_stgy->SendTodayHolding_long(instId) <= vol)
+			if		(TDSpi_stgy->SendTodayHolding_long(instId) > 0 && m_IndexFuturePositionLimit - TDSpi_stgy->SendTodayHolding_short(instId) - TDSpi_stgy->SendTodayHolding_long(instId) >= vol)
 			{
 				TDSpi_stgy->ReqOrderInsert(instId, dir, "0", price, vol);
 			}
-			else if (TDSpi_stgy->SendTodayHolding_long(instId) == 0 && m_IndexFuturePositionLimit - TDSpi_stgy->SendTodayHolding_short(instId) - TDSpi_stgy->SendTodayHolding_long(instId) <= vol)
+			else if (TDSpi_stgy->SendTodayHolding_long(instId) == 0 && m_IndexFuturePositionLimit - TDSpi_stgy->SendTodayHolding_short(instId) - TDSpi_stgy->SendTodayHolding_long(instId) >= vol)
 			{
 				TDSpi_stgy->ReqOrderInsert(instId, dir, "0", price, vol);
 			}

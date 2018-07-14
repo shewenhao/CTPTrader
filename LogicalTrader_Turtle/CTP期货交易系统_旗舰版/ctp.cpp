@@ -40,6 +40,8 @@ DWORD WINAPI ThreadProc(LPVOID lpParameter);
 
 int main(int argc, const char* argv[])
 {
+	
+
 
 	g_hEvent=CreateEvent(NULL, true, false, NULL); 
 
@@ -49,11 +51,11 @@ int main(int argc, const char* argv[])
 	ReadMessage readMessage;
 	memset(&readMessage, 0, sizeof(readMessage));
 	SetMessage(readMessage, kdbPort);
-	kdbGetData();
 	
 
 	//--------------初始化行情UserApi，创建行情API实例----------------------------------
-	CThostFtdcMdApi* pUserApi_md = CThostFtdcMdApi::CreateFtdcMdApi(".\\MDflow\\");
+	cout << "MDflowRight" << endl;
+	CThostFtdcMdApi* pUserApi_md = CThostFtdcMdApi::CreateFtdcMdApi(mdflowPath.c_str());
 	CtpMdSpi* pUserSpi_md = new CtpMdSpi(pUserApi_md);//创建回调处理类对象MdSpi
 	pUserApi_md->RegisterSpi(pUserSpi_md);// 回调对象注入接口类
 	pUserApi_md->RegisterFront(readMessage.m_mdFront);// 注册行情前置地址	
@@ -63,7 +65,7 @@ int main(int argc, const char* argv[])
 
 
 	//--------------初始化交易UserApi，创建交易API实例----------------------------------
-	CThostFtdcTraderApi* pUserApi_trade = CThostFtdcTraderApi::CreateFtdcTraderApi(".\\TDflow\\");
+	CThostFtdcTraderApi* pUserApi_trade = CThostFtdcTraderApi::CreateFtdcTraderApi(tdflowPath.c_str());
 	CtpTraderSpi* pUserSpi_trade = new CtpTraderSpi(pUserApi_trade, pUserApi_md, pUserSpi_md);//构造函数初始化三个变量
 	pUserApi_trade->RegisterSpi((CThostFtdcTraderSpi*)pUserSpi_trade);// 注册事件类
 	pUserApi_trade->SubscribePublicTopic(THOST_TERT_RESTART);// 注册公有流

@@ -22,7 +22,9 @@ public:
 	Strategy(CtpTraderSpi* TDSpi):TDSpi_stgy(TDSpi)
 	{		
 		m_allow_open = false;
-		GetHistoryData();
+
+		//GetHistoryData();
+
 	}
 
 	//行情回调函数，每收到一笔行情就触发一次
@@ -54,11 +56,9 @@ public:
 
 	//存数据到kdb
 	void DataInsertToKDB(CThostFtdcDepthMarketDataField *pDepthMarketData);
-
+	
+	//获得当前时间为kdb+数据插入使用
 	std::string return_current_time_and_date();
-
-	void SendCorrectOrderOnSymbol(TThostFtdcInstrumentIDType    instId, string order_type, TThostFtdcDirectionType dir, TThostFtdcCombOffsetFlagType * kpp, TThostFtdcPriceType price, TThostFtdcVolumeType vol);
-
 
 private:
 
@@ -79,7 +79,6 @@ private:
 	double m_closeProfit_account;//整个账户的平仓盈亏
 
 	vector<History_data> history_data_vec;//保存历史数据的vector
-
 	
 };
 

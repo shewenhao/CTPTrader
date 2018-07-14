@@ -13,9 +13,9 @@ KindleLengthOnSecond:1;
 ////////////////////////////////////////////////////
 /////多腿数据合并                             //////
 ////////////////////////////////////////////////////
-PairLegOne:   h"-1000#select  Date: Date, ReceiveDate:ReceiveDate, Symbol:Symbol, BidPrice1: BidPrice1, BidVol1:BidVol1, AskPrice1:AskPrice1, AskVol1: AskVol1 from Quote where Symbol = `sn1809";
-PairLegTwo:   h"-1000#select  Date: Date, ReceiveDate:ReceiveDate, Symbol:Symbol, BidPrice1: BidPrice1, BidVol1:BidVol1, AskPrice1:AskPrice1, AskVol1: AskVol1 from Quote where Symbol = `SN3M";
-PairLegThree: h"-1000#select  Date: Date, ReceiveDate:ReceiveDate, Symbol:Symbol, BidPrice1: BidPrice1, BidVol1:BidVol1, AskPrice1:AskPrice1, AskVol1: AskVol1 from Quote where Symbol = `SN3M";
+PairLegOne:   h"-5000#select  Date: Date, ReceiveDate:ReceiveDate, Symbol:Symbol, BidPrice1: BidPrice1, BidVol1:BidVol1, AskPrice1:AskPrice1, AskVol1: AskVol1 from Quote where Symbol = `sn1809";
+PairLegTwo:   h"-5000#select  Date: Date, ReceiveDate:ReceiveDate, Symbol:Symbol, BidPrice1: BidPrice1, BidVol1:BidVol1, AskPrice1:AskPrice1, AskVol1: AskVol1 from Quote where Symbol = `SN3M";
+PairLegThree: h"-5000#select  Date: Date, ReceiveDate:ReceiveDate, Symbol:Symbol, BidPrice1: BidPrice1, BidVol1:BidVol1, AskPrice1:AskPrice1, AskVol1: AskVol1 from Quote where Symbol = `SN3M";
 PairLegOne:  `Date`ReceiveDate`Symbol`LegOneBP1`LegOneBV1`LegOneSP1`LegOneSV1 xcol PairLegOne;
 PairLegTwo:  `Date`ReceiveDate`Symbol`LegTwoBP1`LegTwoBV1`LegTwoSP1`LegTwoSV1 xcol PairLegTwo;
 PairLegThree:`Date`ReceiveDate`Symbol`LegThreeBP1`LegThreeBV1`LegThreeSP1`LegThreeSV1 xcol PairLegThree;
@@ -47,4 +47,9 @@ Signal: strategyData;update Signal:1 from `Signal where AskPrice1 < LowerBand;up
 /////策略逻辑判断                             //////
 ////////////////////////////////////////////////////
 SignalLast:-1#select from Signal;delete from `SignalLast where Signal = 0N; FinalSignal:FinalSignal,SignalLast;
+delete from `FinalSignal where Date.minute > 00:59:55, Date.minute < 09:00:05;
+delete from `FinalSignal where Date.minute > 10:14:55, Date.minute < 10:30:05;
+delete from `FinalSignal where Date.minute > 11:29:55, Date.minute < 13:30:05;
+delete from `FinalSignal where Date.minute > 14:59:55, Date.minute < 21:00:05;
 ShortLong:select from FinalSignal  where (Signal<>(prev Signal));
+FinalSignal:ShortLong;

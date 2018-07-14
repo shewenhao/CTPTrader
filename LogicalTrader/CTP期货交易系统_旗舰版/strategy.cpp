@@ -13,9 +13,19 @@ int m_ReadShortLongInitNum = 0;
 int m_ReadShortLongSignal = 0;
 TThostFtdcVolumeType m_VolumeTarget = 1;
 int m_OrderVolumeMultiple = 2;
+int m_IndexFuturePositionLimit = 20;
+//难易程度:   buy  1,-1,0 的含义是:  在AskPrice1下调一个跳价
+//           sell 1,-1,0 的含义是:  在BidPrice1上调一个跳价
+//           sell -1,1,0 的含义是:  在AskPrice1下调一个跳价
+//           buy  -1,1,0 的含义是:  在BidPrice1上调一个跳价
+//           最后一个数字表明多少秒重新挂，0就是每个Tick都检查，大于零的数字就是过多少秒重新挂，小于0应该是错误
+vector<int> orderType = {1, -1, 0};
 
 void Strategy::OnTickData(CThostFtdcDepthMarketDataField *pDepthMarketData)
 {	
+	//更新TD实例中的行情信息
+	TDSpi_stgy->Set_CThostFtdcDepthMarketDataField(pDepthMarketData);
+
 	//计算账户的盈亏信息
 	CalculateEarningsInfo(pDepthMarketData);
 
@@ -27,14 +37,13 @@ void Strategy::OnTickData(CThostFtdcDepthMarketDataField *pDepthMarketData)
 		SaveDataVec(pDepthMarketData);
 
 		//保存数据到txt和csv
-		SaveDataTxtCsv(pDepthMarketData);
+		//SaveDataTxtCsv(pDepthMarketData);
 
 		//撤单追单,撤单成功后再追单
-		TDSpi_stgy->CancelOrder(pDepthMarketData->UpdateTime, pDepthMarketData->LastPrice);
+		TDSpi_stgy->MaintainOrder(pDepthMarketData->UpdateTime, pDepthMarketData->LastPrice);
 	
 		//开仓平仓（策略主逻辑的计算）
 		StrategyCalculate(pDepthMarketData);
-
 
 	}
 }
@@ -58,12 +67,14 @@ void Strategy::Init(string instId, int kdbPort, string kdbScrpit)
 	{
 		res = kdbConnector.sync("exec count Signal from ShortLong");
 		m_ShortLongInitNum = res.res_->j;
+
 	}
 	else
 	{
 		kdbConnector.sync("FinalSignal:([] Date:(); ReceiveDate:(); Symbol:(); LegOneBidPrice1:(); LegOneBidVol1:(); LegOneAskPrice1:(); LegOneAskVol1:(); LegTwoBidPrice1:(); LegTwoBidVol1:(); LegTwoAskPrice1:(); LegTwoAskVol1:(); LegThreeBidPrice1:(); LegThreeBidVol1:(); LegThreeAskPrice1:(); LegThreeAskVol1:(); BidPrice1:(); BidVol1:(); AskPrice1:(); AskVol:(); LowerBand:(); HigherBand:(); Signal:());");
 		kdbConnector.sync(m_kdbScript.c_str());
 		m_ShortLongInitNum = 0;
+
 	}
 
 
@@ -82,8 +93,8 @@ void Strategy::StrategyCalculate(CThostFtdcDepthMarketDataField *pDepthMarketDat
 
 	TThostFtdcDirectionType       dir;//方向,'0'买，'1'卖
 	TThostFtdcCombOffsetFlagType  kpp = "8";//开平，"0"开，"1"平,"3"平今
-	TThostFtdcPriceType           price;//价格，0是市价,上期所不支持
-	TThostFtdcVolumeType          vol;//数量
+	TThostFtdcPriceType           price = 0.0;//价格，0是市价,上期所不支持
+	TThostFtdcVolumeType          vol = 0;//数量
 
 	kdbConnector.sync(m_kdbScript.c_str());
 	kdb::Result res = kdbConnector.sync("exec count Signal from ShortLong");
@@ -109,68 +120,18 @@ void Strategy::StrategyCalculate(CThostFtdcDepthMarketDataField *pDepthMarketDat
 			dir = '0';
 			price = pDepthMarketData->AskPrice1;
 			vol = m_VolumeTarget * m_OrderVolumeMultiple;
-			SendCorrectOrderOnSymbol(instId, order_type, dir, &kpp, price, vol);
+			TDSpi_stgy->SendOrderDecoration(instId, order_type, dir, &kpp, price, vol, orderType, pDepthMarketData);
+
 		}
 		else if (m_ReadShortLongSignal < 0)
 		{
 			dir = '1';
 			price = pDepthMarketData->BidPrice1;
 			vol = m_VolumeTarget * m_OrderVolumeMultiple;
-			SendCorrectOrderOnSymbol(instId, order_type, dir, &kpp, price, vol);
+			TDSpi_stgy->SendOrderDecoration(instId, order_type, dir, &kpp, price, vol, orderType, pDepthMarketData);
+
 		}
 	}
-
-	#pragma region strategyTemplate
-	//if(m_futureData_vec.size() >= 70)
-	//{
-	//	//持仓查询，进行仓位控制
-	//	if(strcmp(pDepthMarketData->InstrumentID, m_instId) == 0)
-	//	{
-	//		if(m_futureData_vec.size() % 20 == 0)
-	//		{
-	//			if(TDSpi_stgy->SendHolding_long(m_instId) + TDSpi_stgy->SendHolding_short(m_instId) < 3)//多空共满仓3手
-	//			{
-	//				//做多
-	//				if(m_futureData_vec[m_futureData_vec.size()-1].new1 - m_futureData_vec[m_futureData_vec.size()-70].new1 >= 0.6)
-	//				{
-	//					strcpy_s(instId, m_instId);
-	//					dir = '0';
-	//					strcpy_s(kpp, "0");
-	//					price = pDepthMarketData->LastPrice + 3;
-	//					vol = 1;
-	//					
-	//					if(m_allow_open == true)
-	//					{
-	//						TDSpi_stgy->ReqOrderInsert(instId, dir, kpp, price, vol);
-
-	//					}
-	//				}
-	//				//做空
-	//				else if(m_futureData_vec[m_futureData_vec.size()-70].new1 - m_futureData_vec[m_futureData_vec.size()-1].new1 >= 0.6)
-	//				{
-	//					strcpy_s(instId, m_instId);
-	//					dir = '1';
-	//					strcpy_s(kpp, "0");
-	//					price = pDepthMarketData->LastPrice - 3;
-	//					vol = 1;
-	//					if(m_allow_open == true)
-	//					{
-	//						TDSpi_stgy->ReqOrderInsert(instId, dir, kpp, price, vol);
-
-	//					}
-	//				}
-
-	//			}
-	//		}
-
-	//	}
-
-
-	//	//强平所有持仓
-	//	if(m_futureData_vec.size() % 140 == 0)
-	//		TDSpi_stgy->ForceClose();
-	//}
-	#pragma endregion strategyTemplate
 
 }
 
@@ -282,9 +243,6 @@ void Strategy::set_instMessage_map_stgy(map<string, CThostFtdcInstrumentField*>&
 }
 
 
-
-
-
 //计算账户的盈亏信息
 void Strategy::CalculateEarningsInfo(CThostFtdcDepthMarketDataField *pDepthMarketData)
 {
@@ -309,9 +267,6 @@ void Strategy::CalculateEarningsInfo(CThostFtdcDepthMarketDataField *pDepthMarke
 
 }
 
-
-
-//读取历史数据
 void Strategy::GetHistoryData()
 {
 	vector<string> data_fileName_vec;
@@ -329,7 +284,6 @@ void Strategy::GetHistoryData()
 	cout<<"K线条数:"<<history_data_vec.size()<<endl;
 
 }
-
 //存数据到kdb
 void Strategy::DataInsertToKDB(CThostFtdcDepthMarketDataField *pDepthMarketData)
 {
@@ -394,41 +348,4 @@ string  Strategy::return_current_time_and_date()
 	auto nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(duration);
 	cout << (ss.str()).append(".").append(to_string(milliseconds.count())) << endl;
 	return (ss.str()).append(".").append(to_string(milliseconds.count()));
-}
-
-void Strategy::SendCorrectOrderOnSymbol(TThostFtdcInstrumentIDType    instId, string order_type, TThostFtdcDirectionType dir, TThostFtdcCombOffsetFlagType * kpp, TThostFtdcPriceType price, TThostFtdcVolumeType vol)
-{
-	if (order_type == "CLOSE_TODAY_YD_OPEN")
-	{
-		if (dir == '0')
-		{
-			if (vol <= TDSpi_stgy->SendTodayHolding_short(instId))
-			{
-				TDSpi_stgy->ReqOrderInsert(instId,  dir, "3", price, vol);
-			}
-			else if (vol <= TDSpi_stgy->SendYdHolding_short(instId))
-			{
-				TDSpi_stgy->ReqOrderInsert(instId, dir, "1", price, vol);
-			}
-			else if (vol > TDSpi_stgy->SendYdHolding_short(instId) && vol > TDSpi_stgy->SendTodayHolding_short(instId))
-			{
-				TDSpi_stgy->ReqOrderInsert(instId, dir, "0", price, vol);
-			}
-		}
-		else if (dir == '1')
-		{
-			if (vol <= TDSpi_stgy->SendTodayHolding_long(instId))
-			{
-				TDSpi_stgy->ReqOrderInsert(instId, dir, "3", price, vol);
-			}
-			else if (vol <= TDSpi_stgy->SendYdHolding_long(instId))
-			{
-				TDSpi_stgy->ReqOrderInsert(instId, dir, "1", price, vol);
-			}
-			else if (vol > TDSpi_stgy->SendYdHolding_long(instId) && vol > TDSpi_stgy->SendTodayHolding_long(instId))
-			{
-				TDSpi_stgy->ReqOrderInsert(instId, dir, "0", price, vol);
-			}
-		}
-	}
 }

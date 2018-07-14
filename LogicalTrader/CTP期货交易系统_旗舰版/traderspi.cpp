@@ -20,6 +20,11 @@ char orderRef[13];//报单引用
 char MapDirection(char src, bool toOrig);
 char MapOffset(char src, bool toOrig);
 
+int IndexFuturePositionLimit = 20;
+
+CThostFtdcDepthMarketDataField *pDepthMarketDataTD;
+
+
 
 
 
@@ -520,6 +525,7 @@ void CtpTraderSpi::ReqOrderInsert(TThostFtdcInstrumentIDType instId,
 	strcpy(req.OrderRef, orderRef);  //报单引用
 	int nextOrderRef = atoi(orderRef);
 	sprintf(orderRef, "%d", ++nextOrderRef);
+	
 
 	req.LimitPrice = price;	//价格
 	if(0==req.LimitPrice){
@@ -614,6 +620,7 @@ void CtpTraderSpi::OnRspOrderAction(
 			<<endl;
 	}
 
+
 	//撤单成功后重新发委托
 
 	if(bIsLast) SetEvent(g_hEvent);	
@@ -624,6 +631,7 @@ void CtpTraderSpi::OnRtnOrder(CThostFtdcOrderField *pOrder)
 {	
 
 	cerr<<"报单回报:前置编号FrontID:"<<pOrder->FrontID<<" 会话编号SessionID:"<<pOrder->SessionID<<" OrderRef:"<<pOrder->OrderRef<<endl;
+
 
 	//所有合约
 	CThostFtdcOrderField* order = new CThostFtdcOrderField();
@@ -678,6 +686,16 @@ void CtpTraderSpi::OnRtnOrder(CThostFtdcOrderField *pOrder)
 			price = order->LimitPrice - 10;
 
 		vol = order->VolumeTotal;//要用剩余数量
+		string instIdStr(instId);
+		string strOrderRef = order->OrderRef;
+		if (m_frontsessionref_ordertype.find(to_string(frontId) + to_string(sessionId) + strOrderRef) == m_frontsessionref_ordertype.end())
+		{
+
+		}
+		else
+		{
+			SendOrderDecoration(instId, Send_TThostFtdcCombOffsetFlagType(instIdStr.substr(0, 2)), dir, &kpp, price, vol, m_frontsessionref_ordertype[to_string(frontId) + to_string(sessionId) + strOrderRef], pDepthMarketDataTD);
+		}
 
 		//ReqOrderInsert(instId,dir,kpp,price,vol);
 	}
@@ -1116,67 +1134,116 @@ void CtpTraderSpi::setAccount(TThostFtdcBrokerIDType	appId,	TThostFtdcUserIDType
 
 
 //撤单，如需追单，可在报单回报里面等撤单成功后再进行
-void CtpTraderSpi::CancelOrder(const string& MDtime, double MDprice)
+void CtpTraderSpi::MaintainOrder(const string& MDtime, double MDprice)
 {
-	string InsertTime_str;//委托时间
-
-	//TThostFtdcInstrumentIDType    instId;//合约,合约代码在结构体里已经有了
-	//TThostFtdcDirectionType       dir;//方向,'0'买，'1'卖
-	//TThostFtdcCombOffsetFlagType  kpp;//开平，"0"开，"1"平,"3"平今
-	//TThostFtdcPriceType           price;//价格，0是市价,上期所不支持
-	//TThostFtdcVolumeType          vol;//数量
-
+	string InsertTime_str;
 	int MDtime_last2;
 
-	if(orderList.size() > 0)
+	if (orderList.size() > 0)
 	{
-		//cerr<<"orderList.size():"<<orderList.size()<<endl;
-		for(vector<CThostFtdcOrderField*>::iterator iter = orderList.begin(); iter != orderList.end(); iter++)//倒序遍历，break
+		cerr<<"orderList.size():"<<orderList.size()<<endl;
+	}
+
+	for (vector<CThostFtdcOrderField*>::iterator iter = orderList.begin(); iter != orderList.end(); iter++)//倒序遍历，break
+	{
+				
+		/*cout<<"合约:"<<(*iter)->InstrumentID<<" 报单引用OrderRef:"<<(*iter)->OrderRef<<" 前置编号FrontID:"<<(*iter)->FrontID<<" 会话编号SessionID:"<<(*iter)->SessionID
+		<<" 报单状态:"<<(*iter)->OrderStatus<<" 经纪公司报单编号:"<<(*iter)->BrokerOrderSeq
+		<<endl;*/
+		if ((*iter)->OrderStatus == '3' || (*iter)->OrderStatus == '1')//未成交还在队列中,部分成交还在队列中
 		{
-			/*
-			cout<<"合约:"<<(*iter)->InstrumentID<<" 报单引用OrderRef:"<<(*iter)->OrderRef<<" 前置编号FrontID:"<<(*iter)->FrontID<<" 会话编号SessionID:"<<(*iter)->SessionID
-			<<" 报单状态:"<<(*iter)->OrderStatus<<" 经纪公司报单编号:"<<(*iter)->BrokerOrderSeq
-			<<endl;
-			*/
 
-			if((*iter)->OrderStatus == '3' || (*iter)->OrderStatus == '1')//未成交还在队列中,部分成交还在队列中
+			InsertTime_str = (*iter)->InsertTime;//委托时间"21:47:01"
+
+			MDtime_last2 = atoi(MDtime.substr(6, 2).c_str());
+
+			if( MDtime_last2 < atoi(InsertTime_str.substr(6, 2).c_str()))//行情时间最后两位小于委托时间的最后两位
+				MDtime_last2 += 60;//行情时间加60秒
+
+			if(MDtime_last2 - atoi(InsertTime_str.substr(6, 2).c_str()) >= 10)//委托大于10秒未成交
 			{
+				cerr<<"撤单:"<<endl;
+				//撤单
+				ReqOrderAction((*iter)->BrokerOrderSeq);
 
-				InsertTime_str = (*iter)->InsertTime;//委托时间"21:47:01"
+				//重新发委托，应该在撤单成功后再进行
 
-				MDtime_last2 = atoi(MDtime.substr(6, 2).c_str());
+				//strcpy(instId, (*iter)->InstrumentID);
+				//dir = (*iter)->Direction;
+				//strcpy(kpp, (*iter)->CombOffsetFlag);
 
-				if( MDtime_last2 < atoi(InsertTime_str.substr(6, 2).c_str()))//行情时间最后两位小于委托时间的最后两位
-					MDtime_last2 += 60;//行情时间加60秒
+				//if((*iter)->Direction == '0')
+				//	price = MDprice + 10;
+				//else if((*iter)->Direction == '1')
+				//	price = MDprice - 10;
 
-				if(MDtime_last2 - atoi(InsertTime_str.substr(6, 2).c_str()) >= 6)//委托大于6秒未成交
-				{
-					cerr<<"撤单:"<<endl;
-					//撤单
-					ReqOrderAction((*iter)->BrokerOrderSeq);
+				//vol = (*iter)->VolumeTotal;//要用剩余数量
 
-					//重新发委托，应该在撤单成功后再进行
-
-					//strcpy(instId, (*iter)->InstrumentID);
-					//dir = (*iter)->Direction;
-					//strcpy(kpp, (*iter)->CombOffsetFlag);
-
-					//if((*iter)->Direction == '0')
-					//	price = MDprice + 10;
-					//else if((*iter)->Direction == '1')
-					//	price = MDprice - 10;
-
-					//vol = (*iter)->VolumeTotal;//要用剩余数量
-
-					//cerr<<"重新发单:"<<endl;
-					//ReqOrderInsert(instId,dir,kpp,price,vol);
-
-				}
-
+				//cerr<<"重新发单:"<<endl;
+				//ReqOrderInsert(instId,dir,kpp,price,vol);
 
 			}
-		}
+		}				
 	}
+	//string InsertTime_str;//委托时间
+
+	////TThostFtdcInstrumentIDType    instId;//合约,合约代码在结构体里已经有了
+	////TThostFtdcDirectionType       dir;//方向,'0'买，'1'卖
+	////TThostFtdcCombOffsetFlagType  kpp;//开平，"0"开，"1"平,"3"平今
+	////TThostFtdcPriceType           price;//价格，0是市价,上期所不支持
+	////TThostFtdcVolumeType          vol;//数量
+
+	//int MDtime_last2;
+
+	//if(orderList.size() > 0)
+	//{
+	//	//cerr<<"orderList.size():"<<orderList.size()<<endl;
+	//	for(vector<CThostFtdcOrderField*>::iterator iter = orderList.begin(); iter != orderList.end(); iter++)//倒序遍历，break
+	//	{
+	//		/*
+	//		cout<<"合约:"<<(*iter)->InstrumentID<<" 报单引用OrderRef:"<<(*iter)->OrderRef<<" 前置编号FrontID:"<<(*iter)->FrontID<<" 会话编号SessionID:"<<(*iter)->SessionID
+	//		<<" 报单状态:"<<(*iter)->OrderStatus<<" 经纪公司报单编号:"<<(*iter)->BrokerOrderSeq
+	//		<<endl;
+	//		*/
+
+	//		if((*iter)->OrderStatus == '3' || (*iter)->OrderStatus == '1')//未成交还在队列中,部分成交还在队列中
+	//		{
+
+	//			InsertTime_str = (*iter)->InsertTime;//委托时间"21:47:01"
+
+	//			MDtime_last2 = atoi(MDtime.substr(6, 2).c_str());
+
+	//			if( MDtime_last2 < atoi(InsertTime_str.substr(6, 2).c_str()))//行情时间最后两位小于委托时间的最后两位
+	//				MDtime_last2 += 60;//行情时间加60秒
+
+	//			if(MDtime_last2 - atoi(InsertTime_str.substr(6, 2).c_str()) >= 6)//委托大于6秒未成交
+	//			{
+	//				cerr<<"撤单:"<<endl;
+	//				//撤单
+	//				ReqOrderAction((*iter)->BrokerOrderSeq);
+
+	//				//重新发委托，应该在撤单成功后再进行
+
+	//				//strcpy(instId, (*iter)->InstrumentID);
+	//				//dir = (*iter)->Direction;
+	//				//strcpy(kpp, (*iter)->CombOffsetFlag);
+
+	//				//if((*iter)->Direction == '0')
+	//				//	price = MDprice + 10;
+	//				//else if((*iter)->Direction == '1')
+	//				//	price = MDprice - 10;
+
+	//				//vol = (*iter)->VolumeTotal;//要用剩余数量
+
+	//				//cerr<<"重新发单:"<<endl;
+	//				//ReqOrderInsert(instId,dir,kpp,price,vol);
+
+	//			}
+
+
+	//		}
+	//	}
+	//}
 }
 
 
@@ -1841,4 +1908,122 @@ void  CtpTraderSpi::define_TThostFtdcCombOffsetFlagType()
 string CtpTraderSpi::Send_TThostFtdcCombOffsetFlagType(string instID)
 {
 	return m_symbol_order_type_map[instID];
+}
+
+void CtpTraderSpi::Set_CThostFtdcDepthMarketDataField(CThostFtdcDepthMarketDataField *pDepthMarketData)
+{
+	pDepthMarketDataTD = pDepthMarketData;
+}
+
+void CtpTraderSpi::SendOrderDecoration(TThostFtdcInstrumentIDType instId, string order_type, TThostFtdcDirectionType dir, TThostFtdcCombOffsetFlagType * kpp, TThostFtdcPriceType price, TThostFtdcVolumeType vol, vector<int> orderType, CThostFtdcDepthMarketDataField *pDepthMarketData)
+{
+	string strOrderRef = orderRef;
+	m_frontsessionref_ordertype.insert (std::pair<string, vector<int>>(to_string(frontId) + to_string(sessionId) + strOrderRef, orderType));
+	m_frontsessionref_order_type.insert(std::pair<string, string>(to_string(frontId) + to_string(sessionId) + strOrderRef, order_type));
+	price = CheckOrderPosition(instId, dir, price, orderType, pDepthMarketData);
+
+	#pragma region CLOSE_TODAY_YD_OPEN
+		if (order_type == "CLOSE_TODAY_YD_OPEN")
+		{
+			if (dir == '0')
+			{
+				if (vol <= this->SendTodayHolding_short(instId))
+				{
+					this->ReqOrderInsert(instId, dir, "3", price, vol);
+				}
+				else if (vol <= this->SendYdHolding_short(instId))
+				{
+					this->ReqOrderInsert(instId, dir, "1", price, vol);
+				}
+				else if (vol > this->SendYdHolding_short(instId) && vol > this->SendTodayHolding_short(instId))
+				{
+					this->ReqOrderInsert(instId, dir, "0", price, vol);
+				}
+			}
+			else if (dir == '1')
+			{
+				if (vol <= this->SendTodayHolding_long(instId))
+				{
+					this->ReqOrderInsert(instId, dir, "3", price, vol);
+				}
+				else if (vol <= this->SendYdHolding_long(instId))
+				{
+					this->ReqOrderInsert(instId, dir, "1", price, vol);
+				}
+				else if (vol > this->SendYdHolding_long(instId) && vol > this->SendTodayHolding_long(instId))
+				{
+					this->ReqOrderInsert(instId, dir, "0", price, vol);
+				}
+			}
+		}
+	#pragma endregion CLOSE_TODAY_YD_OPEN
+
+	#pragma region CLOSE_TODAY_YD_OPEN
+		if (order_type == "CLOSE_IF_TODAYPOS_OPEN")
+		{
+			if (dir == '0')
+			{
+				if (this->SendTodayHolding_short(instId) > 0 && IndexFuturePositionLimit - this->SendTodayHolding_short(instId) - this->SendTodayHolding_long(instId) >= vol)
+				{
+					this->ReqOrderInsert(instId, dir, "0", price, vol);
+				}
+				else if (this->SendTodayHolding_short(instId) == 0 && IndexFuturePositionLimit - this->SendTodayHolding_short(instId) - this->SendTodayHolding_long(instId) >= vol)
+				{
+					this->ReqOrderInsert(instId, dir, "0", price, vol);
+				}
+				else if (this->SendTodayHolding_short(instId) == 0 && this->SendYdHolding_short(instId) >= vol)
+				{
+					this->ReqOrderInsert(instId, dir, "1", price, vol);
+				}
+			}
+			else if (dir == '1')
+			{
+				if (this->SendTodayHolding_long(instId) > 0 && IndexFuturePositionLimit - this->SendTodayHolding_short(instId) - this->SendTodayHolding_long(instId) >= vol)
+				{
+					this->ReqOrderInsert(instId, dir, "0", price, vol);
+				}
+				else if (this->SendTodayHolding_long(instId) == 0 && IndexFuturePositionLimit - this->SendTodayHolding_short(instId) - this->SendTodayHolding_long(instId) >= vol)
+				{
+					this->ReqOrderInsert(instId, dir, "0", price, vol);
+				}
+				else if (this->SendTodayHolding_long(instId) == 0 && this->SendYdHolding_long(instId) >= vol)
+				{
+					this->ReqOrderInsert(instId, dir, "1", price, vol);
+				}
+			}
+		}
+	#pragma endregion CLOSE_TODAY_YD_OPEN
+}
+void CtpTraderSpi::CheckOrderPosition(TThostFtdcInstrumentIDType instId, TThostFtdcDirectionType dir, TThostFtdcPriceType *price, vector<int> orderType, CThostFtdcDepthMarketDataField *pDepthMarketData)
+{
+	int OrderHitPutMode = orderType[0];
+	int OrderPriceMover = orderType[1];
+	int OrderAdjustMode = orderType[2];
+	double OrderPriceTick = m_instMessage_map[instId]->VolumeMultiple;
+	double SettlePrice = 0.0;
+	
+
+	if (dir == '0')
+	{
+		if (OrderHitPutMode == 1)
+		{
+			SettlePrice = pDepthMarketData->AskPrice1 + OrderPriceMover * m_instMessage_map[instId]->PriceTick;
+		}
+		else if (OrderHitPutMode == -1)
+		{
+			SettlePrice = pDepthMarketData->BidPrice1 + OrderPriceMover * m_instMessage_map[instId]->PriceTick;
+		}
+	}
+	else if (dir == '1')
+	{
+		if (OrderHitPutMode == 1)
+		{
+			SettlePrice = pDepthMarketData->BidPrice1 - OrderPriceMover * m_instMessage_map[instId]->PriceTick;
+		}
+		else if (OrderHitPutMode == -1)
+		{
+			SettlePrice = pDepthMarketData->AskPrice1 - OrderPriceMover * m_instMessage_map[instId]->PriceTick;
+		}
+	}
+	*price = SettlePrice;
 }

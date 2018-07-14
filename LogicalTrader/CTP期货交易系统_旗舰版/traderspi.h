@@ -77,6 +77,14 @@ public:
 	///请求查询投资者持仓明细响应
 	virtual void OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDetailField *pInvestorPositionDetail, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
 
+	//市场行情通知
+	void CtpTraderSpi::Set_CThostFtdcDepthMarketDataField(CThostFtdcDepthMarketDataField *pDepthMarketData);
+
+	///判断订单类型
+	virtual void SendOrderDecoration(TThostFtdcInstrumentIDType    instId, string order_type, TThostFtdcDirectionType dir, TThostFtdcCombOffsetFlagType * kpp, TThostFtdcPriceType price, TThostFtdcVolumeType vol, vector<int> orderType, CThostFtdcDepthMarketDataField *pDepthMarketData);
+
+	//判断下单类型
+	virtual void CheckOrderPosition(TThostFtdcInstrumentIDType instId, TThostFtdcDirectionType dir, TThostFtdcPriceType *price, vector<int> orderType, CThostFtdcDepthMarketDataField *pDepthMarketData);
 public:
 	///用户登录请求
 	void ReqUserLogin(TThostFtdcBrokerIDType	appId,
@@ -130,7 +138,7 @@ public:
 	void setAccount(TThostFtdcBrokerIDType	appId,	TThostFtdcUserIDType	userId,	TThostFtdcPasswordType	passwd);
 
 	//撤单，如需追单，可在报单回报里面等撤单成功后再进行
-	void CancelOrder(const string& MDtime, double MDprice);
+	void MaintainOrder(const string& MDtime, double MDprice);
 
 	//设置交易的合约代码
 	void setInstId(string instId);
@@ -206,8 +214,14 @@ private:
 
 	map<string, CThostFtdcInstrumentField*> m_instMessage_map;//保存合约信息的map
 
-	map<string, string> m_symbol_order_type_map;
+	map<string, string> m_symbol_order_type_map;//保存不同合约因交易所规定限制带来的有限平仓还是对开的map
 	
+	map<string, vector<int>> m_frontsessionref_ordertype; //保存本连接带来的订单类型，这样维护订单的时候如果订单需要撤单和重新挂单有所依据
+	
+	map<string, string> m_frontsessionref_order_type; //保存本连接所有带来的订单开平类型，这样维护订单的时候如果订单需要撤单和重新挂单有所开平依据
+
+	map<string, CThostFtdcOrderField*> m_CThostFtdcInputOrder_type;
+
 	TThostFtdcInstrumentIDType m_instId;//合约代码
 	
 	string m_Instrument_all;//所有合约代码合在一起
