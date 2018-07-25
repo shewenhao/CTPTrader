@@ -35,6 +35,30 @@ struct ReadMessage
 	string m_read_contract;//合约代码
 
 	int m_kdbPort;
+
+	string m_strategy_strategytype = "";
+
+	int m_strategy_volumetarget = 1;
+
+	string m_strategy_kdbscript = "";
+
+	double m_strategy_par1 = 0.0;
+
+	double m_strategy_par2 = 0.0;
+
+	double m_strategy_par3 = 0.0;
+
+	double m_strategy_par4 = 0.0;
+
+	double m_strategy_par5 = 0.0;
+	
+	double m_strategy_par6 = 0.0;
+
+	int m_strategy_orderType1 = 0;
+
+	int m_strategy_orderType2 = 0;
+
+	int m_strategy_orderType3 = 0;
 };
 
 kdb::Connector kdbConnectorSetGet;
@@ -75,15 +99,15 @@ string replaceAll(std::string& str, const std::string& from, const std::string& 
 
 void kdbSetData()
 {
-	/*kdbConnectorSetGet.sync("Quote:-500000#select from Quote;");
-	kdbConnectorSetGet.sync("delete from `Quote where Date.minute > 02:30:00, Date.minute <= 09:00:00;delete from `Quote where Date.minute > 11:30 : 00, Date.minute < 13 : 00 : 00;delete from `Quote where Date.minute > 15 : 15 : 00, Date.minute < 21 : 00 : 00;");
-	kdbConnectorSetGet.sync(kdbDataSetPath.c_str());*/
+	kdbConnectorSetGet.sync("Quote:-500000#select from Quote;");
+	kdbConnectorSetGet.sync("delete from `Quote where Date.minute > 02:30:00, Date.minute <= 09:00:00;delete from `Quote where Date.minute > 11:30:00, Date.minute < 13:00:00;delete from `Quote where Date.minute > 15:15:00, Date.minute < 21:00:00;");
+	kdbConnectorSetGet.sync(kdbDataSetPath.c_str());
 }
 
 void kdbGetData()
 {
-	//kdbConnectorSetGet.sync(kdbDataGetPath.c_str());
-}
+	kdbConnectorSetGet.sync(kdbDataGetPath.c_str());
+} 
 
 string return_current_time_and_date1()
 {
@@ -113,11 +137,10 @@ string return_current_time_and_date1()
 	return (ss.str()).append(".").append(to_string(milliseconds.count()));
 }
 
-void SetMessage(ReadMessage& readMessage, int *kdbPort)//要用引用
+void SetMessage(ReadMessage& readMessage, int *kdbPort, int *strategyVolumeTarget, string *strategykdbscript, double *par1, double *par2, double *par3, double *par4, double *par5, double *par6, int *strategy_orderType1, int *strategy_orderType2, int *strategy_orderType3, string strategyAccountParampath, string *strategyPairLeg1Symbol, string *strategyPairLeg2Symbol, string *strategyPairLeg3Symbol)//要用引用
 {
-	//kdbConnectorSetGet.connect("localhost", *kdbPort);
 	kdbDataSetPath = ExePath();
-	acountParampath = kdbDataSetPath + "/input/AccountParam.ini";
+	acountParampath = kdbDataSetPath + "/Input/" + strategyAccountParampath;
 	acountParampath = replaceAll(acountParampath, "\\", "/");
 	mdflowPath = kdbDataSetPath + "\\MDflow\\";
 	tdflowPath = kdbDataSetPath + "\\TDflow\\";
@@ -155,80 +178,105 @@ void SetMessage(ReadMessage& readMessage, int *kdbPort)//要用引用
 	
 	//-------------------------------设置合约模块-------------------------------
 	CString read_contract;
-	GetPrivateProfileString("Contract","contract","contract_error",read_contract.GetBuffer(MAX_PATH),MAX_PATH,"./input/AccountParam.ini");
+	GetPrivateProfileString("Contract", "contract", "contract_error", read_contract.GetBuffer(MAX_PATH), MAX_PATH, acountParampath.c_str());
 	
 	readMessage.m_read_contract = (LPCTSTR)read_contract;
 
 	//-------------------------------读取kdb模块-------------------------------
 	CString read_kdbPort;
 	GetPrivateProfileString("DataBaseAddress", "kdbPort", "kdbPort_error", read_kdbPort.GetBuffer(MAX_PATH), MAX_PATH, acountParampath.c_str());
-
 	readMessage.m_kdbPort = atoi(read_kdbPort);
 	*kdbPort = atoi(read_kdbPort);
 	kdbConnectorSetGet.connect("localhost", *kdbPort);
-	
-}
 
-//void SetMessage(ReadMessage& readMessage, int kdbPort)
-//{
-//	kdbConnectorSetGet.connect("localhost", kdbPort);
-//	kdbDataSetPath = ExePath();
-//	acountParampath = kdbDataSetPath + "/input/AccountParam.csv";
-//	acountParampath = replaceAll(acountParampath, "\\", "/");
-//	mdflowPath = kdbDataSetPath + "\\MDflow\\";
-//	tdflowPath = kdbDataSetPath + "\\TDflow\\";
-//	//kdbDataSetPath = kdbDataSetPath.substr(0, kdbDataSetPath.find("CTPTrader")); 
-//	kdbDataSetPath = replaceAll(kdbDataSetPath, "\\", "/");
-//	kdbScriptExePath = "\\l " + kdbDataSetPath + specificFolderPath;
-//	kdbDataGetPath = "Quote: get `:" + kdbDataSetPath + "/Quote;";
-//	kdbDataSetPath = "`:" + kdbDataSetPath + "/Quote set Quote;";
-//	kdbGetData();
-//
-//	string infor_line;
-//	string infor_cell;
-//	cout << "check AccountParam.csv Right" << endl;
-//	ifstream Config_Stream(acountParampath);
-//	int count_infor = 0;
-//
-//	if (Config_Stream.is_open())
-//	{
-//		getline(Config_Stream, infor_line);
-//		stringstream   lineStream(infor_line);
-//
-//		while (count_infor < 6)
-//		{
-//			getline(lineStream, infor_cell, '|');
-//			cout << infor_cell << endl;
-//			if (count_infor == 0)
-//			{
-//				strcpy_s(readMessage.m_appId, infor_cell.c_str());
-//			}
-//			if (count_infor == 1)
-//			{
-//				strcpy_s(readMessage.m_userId, infor_cell.c_str());
-//			}
-//			if (count_infor == 2)
-//			{
-//				strcpy_s(readMessage.m_passwd, infor_cell.c_str());
-//			}
-//			if (count_infor == 3)
-//			{
-//				strcpy_s(readMessage.m_mdFront, infor_cell.c_str());
-//			}
-//			if (count_infor == 4)
-//			{
-//				strcpy_s(readMessage.m_tradeFront, infor_cell.c_str());
-//			}
-//			if (count_infor == 5)
-//			{
-//				readMessage.m_read_contract = infor_cell;
-//			}
-//
-//			count_infor++;
-//		}
-//		Config_Stream.close();
-//	}
-//}
+	//-------------------------------设置策略与否-------------------------------
+	CString read_StrategyType;
+	GetPrivateProfileString("StrategySetting", "StrategyType", "StrategySetting_error", read_StrategyType.GetBuffer(MAX_PATH), MAX_PATH, acountParampath.c_str());
+
+	readMessage.m_strategy_strategytype = read_StrategyType;
+	//*strategyVolumeTarget = readMessage.m_strategy_strategyorquote;
+	
+	//-------------------------------设置策略仓位-------------------------------
+	CString read_strategy_volumeTarget;
+	GetPrivateProfileString("StrategySetting", "VolumeTarget", "StrategySetting_error", read_strategy_volumeTarget.GetBuffer(MAX_PATH), MAX_PATH, acountParampath.c_str());
+
+	readMessage.m_strategy_volumetarget = atoi(read_strategy_volumeTarget);
+	*strategyVolumeTarget = readMessage.m_strategy_volumetarget;
+
+	//-------------------------------设置策略卷轴-------------------------------
+	CString read_strategy_kdbscript;
+	GetPrivateProfileString("StrategySetting", "kdbScript", "StrategySetting_error", read_strategy_kdbscript.GetBuffer(MAX_PATH), MAX_PATH, acountParampath.c_str());
+
+	readMessage.m_strategy_kdbscript = read_strategy_kdbscript;
+	cout << readMessage.m_strategy_kdbscript << endl;
+	*strategykdbscript = readMessage.m_strategy_kdbscript;
+
+	//-------------------------------设置策略参数-------------------------------
+	CString read_par1;
+	GetPrivateProfileString("StrategySetting", "par1", "StrategySetting_error", read_par1.GetBuffer(MAX_PATH), MAX_PATH, acountParampath.c_str());
+	readMessage.m_strategy_par1 = atof(read_par1);
+	*par1 = readMessage.m_strategy_par1;
+
+	CString read_par2;
+	GetPrivateProfileString("StrategySetting", "par2", "StrategySetting_error", read_par2.GetBuffer(MAX_PATH), MAX_PATH, acountParampath.c_str());
+	readMessage.m_strategy_par2 = atof(read_par2);
+	*par2 = readMessage.m_strategy_par2;
+
+	CString read_par3;
+	GetPrivateProfileString("StrategySetting", "par3", "StrategySetting_error", read_par3.GetBuffer(MAX_PATH), MAX_PATH, acountParampath.c_str());
+	readMessage.m_strategy_par3 = atof(read_par3);
+	*par3 = readMessage.m_strategy_par3;
+
+	CString read_par4;
+	GetPrivateProfileString("StrategySetting", "par4", "StrategySetting_error", read_par4.GetBuffer(MAX_PATH), MAX_PATH, acountParampath.c_str());
+	readMessage.m_strategy_par4 = atof(read_par4);
+	*par4 = readMessage.m_strategy_par4;
+
+	CString read_par5;
+	GetPrivateProfileString("StrategySetting", "par5", "StrategySetting_error", read_par5.GetBuffer(MAX_PATH), MAX_PATH, acountParampath.c_str());
+	readMessage.m_strategy_par5 = atof(read_par5);
+	*par5 = readMessage.m_strategy_par5;
+
+	CString read_par6;
+	GetPrivateProfileString("StrategySetting", "par6", "StrategySetting_error", read_par6.GetBuffer(MAX_PATH), MAX_PATH, acountParampath.c_str());
+	readMessage.m_strategy_par6 = atof(read_par6);
+	*par6 = readMessage.m_strategy_par6;
+
+	//-------------------------------设置订单类型-------------------------------
+	CString read_strategy_orderType1;
+	GetPrivateProfileString("StrategySetting", "strategy_orderType1", "StrategySetting_error", read_strategy_orderType1.GetBuffer(MAX_PATH), MAX_PATH, acountParampath.c_str());
+	readMessage.m_strategy_orderType1 = atoi(read_strategy_orderType1);
+	*strategy_orderType1 = readMessage.m_strategy_orderType1;
+
+	CString read_strategy_orderType2;
+	GetPrivateProfileString("StrategySetting", "strategy_orderType2", "StrategySetting_error", read_strategy_orderType2.GetBuffer(MAX_PATH), MAX_PATH, acountParampath.c_str());
+	readMessage.m_strategy_orderType2 = atoi(read_strategy_orderType2);
+	*strategy_orderType2 = readMessage.m_strategy_orderType2;
+
+	CString read_strategy_orderType3;
+	GetPrivateProfileString("StrategySetting", "strategy_orderType3", "StrategySetting_error", read_strategy_orderType3.GetBuffer(MAX_PATH), MAX_PATH, acountParampath.c_str());
+	readMessage.m_strategy_orderType3 = atoi(read_strategy_orderType3);
+	*strategy_orderType3 = readMessage.m_strategy_orderType3;
+
+	//-------------------------------设置数据合约-------------------------------
+	CString read_strategyPairLeg1Symbol;
+	GetPrivateProfileString("StrategySetting", "strategyPairLeg1Symbol", "StrategySetting_error", read_strategyPairLeg1Symbol.GetBuffer(MAX_PATH), MAX_PATH, acountParampath.c_str());
+	*strategyPairLeg1Symbol = read_strategyPairLeg1Symbol;
+
+	CString read_strategyPairLeg2Symbol;
+	GetPrivateProfileString("StrategySetting", "strategyPairLeg2Symbol", "StrategySetting_error", read_strategyPairLeg2Symbol.GetBuffer(MAX_PATH), MAX_PATH, acountParampath.c_str());
+	*strategyPairLeg2Symbol = read_strategyPairLeg2Symbol;
+
+	CString read_strategyPairLeg3Symbol;
+	GetPrivateProfileString("StrategySetting", "strategyPairLeg3Symbol", "StrategySetting_error", read_strategyPairLeg3Symbol.GetBuffer(MAX_PATH), MAX_PATH, acountParampath.c_str());
+	*strategyPairLeg3Symbol = read_strategyPairLeg3Symbol;
+
+	//-------------------------------设置初始工作-------------------------------
+	if (readMessage.m_strategy_strategytype == "Quote")
+	{
+		kdbGetData();
+	}
+}
 
 void timer_start(std::function<void(void)> func, unsigned int interval)
 {

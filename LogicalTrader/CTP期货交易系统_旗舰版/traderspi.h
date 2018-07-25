@@ -220,7 +220,11 @@ private:
 	
 	map<string, string> m_frontsessionref_order_type; //保存本连接所有带来的订单开平类型，这样维护订单的时候如果订单需要撤单和重新挂单有所开平依据
 
+	map<string, CThostFtdcOrderField*> m_frontsessionref_frontsessionref;//保存被撤单的单子编号，防止反复根据撤单回报进行相关操作
+
 	map<string, CThostFtdcOrderField*> m_CThostFtdcInputOrder_type;
+
+	map<string, CThostFtdcDepthMarketDataField*> m_pDepthMarketData_type;//把和策略相关的行情存储进入到map中，防止其他策略的订阅行情干扰
 
 	TThostFtdcInstrumentIDType m_instId;//合约代码
 	

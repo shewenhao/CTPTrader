@@ -7,62 +7,79 @@ using namespace std;
 using namespace kdb;
 
 kdb::Connector kdbConnector;
-string m_kdbScript = "ARB_IAD_V2T1_[sn_SN3M]_1_200_HIT.q";
+string m_kdbScript;
 int m_ShortLongInitNum = 0;
 int m_ReadShortLongInitNum = 0;
 int m_ReadShortLongSignal = 0;
 TThostFtdcVolumeType m_VolumeTarget = 1;
 int m_OrderVolumeMultiple = 2;
 int m_IndexFuturePositionLimit = 20;
+string m_StrategyType = "";
 //难易程度:   buy  1,-1,0 的含义是:  在AskPrice1下调一个跳价
 //           sell 1,-1,0 的含义是:  在BidPrice1上调一个跳价
 //           sell -1,1,0 的含义是:  在AskPrice1下调一个跳价
 //           buy  -1,1,0 的含义是:  在BidPrice1上调一个跳价
 //           最后一个数字表明多少秒重新挂，0就是每个Tick都检查，大于零的数字就是过多少秒重新挂，小于0应该是错误
-vector<int> orderType = {1, -1, 0};
+vector<int> orderType = {0, 0, 0};
 
 void Strategy::OnTickData(CThostFtdcDepthMarketDataField *pDepthMarketData)
 {	
-	//更新TD实例中的行情信息
-	TDSpi_stgy->Set_CThostFtdcDepthMarketDataField(pDepthMarketData);
-
-	//计算账户的盈亏信息
-	CalculateEarningsInfo(pDepthMarketData);
-
-	if(strcmp(pDepthMarketData->InstrumentID, m_instId) == 0)
+	if (m_StrategyType == "Quote")
 	{
-		cerr<<"策略收到行情:"<<pDepthMarketData->InstrumentID<<","<<pDepthMarketData->TradingDay<<","<<pDepthMarketData->UpdateTime<<",最新价:"<<pDepthMarketData->LastPrice<<",涨停价:"<<pDepthMarketData->UpperLimitPrice<<",跌停价:"<<pDepthMarketData->LowerLimitPrice<<endl;
-		
-		//保存数据到vector
-		SaveDataVec(pDepthMarketData);
-
-		//保存数据到txt和csv
-		//SaveDataTxtCsv(pDepthMarketData);
-
-		//撤单追单,撤单成功后再追单
-		TDSpi_stgy->MaintainOrder(pDepthMarketData->UpdateTime, pDepthMarketData->LastPrice);
-	
-		//开仓平仓（策略主逻辑的计算）
-		StrategyCalculate(pDepthMarketData);
-
+		DataInsertToKDB(pDepthMarketData);
 	}
+	else
+	{
+		//更新TD实例中的行情信息
+
+		//计算账户的盈亏信息
+		CalculateEarningsInfo(pDepthMarketData);
+
+		if (strcmp(pDepthMarketData->InstrumentID, m_instId) == 0)
+		{
+			TDSpi_stgy->Set_CThostFtdcDepthMarketDataField(pDepthMarketData);
+
+			cerr << "策略收到行情:" << pDepthMarketData->InstrumentID << "," << pDepthMarketData->TradingDay << "," << pDepthMarketData->UpdateTime << ",最新价:" << pDepthMarketData->LastPrice << ",涨停价:" << pDepthMarketData->UpperLimitPrice << ",跌停价:" << pDepthMarketData->LowerLimitPrice << endl;
+
+			//保存数据到vector
+			SaveDataVec(pDepthMarketData);
+
+			//保存数据到txt和csv
+			//SaveDataTxtCsv(pDepthMarketData);
+
+			//撤单追单,撤单成功后再追单
+			TDSpi_stgy->MaintainOrder(pDepthMarketData->UpdateTime, pDepthMarketData->LastPrice);
+
+			//开仓平仓（策略主逻辑的计算）
+			StrategyCalculate(pDepthMarketData);
+
+		}
+	}
+	
 }
 
 
 
 //设置交易的合约代码
-void Strategy::Init(string instId, int kdbPort, string kdbScrpit)
+void Strategy::Init(string strategyType, string instId, int kdbPort, string kdbScrpit, int strategyVolumeTarget, string strategykdbscript, double par1, double par2, double par3, double par4, double par5, double par6, int strategyOrderType1, int strategyOrderType2, int strategyOrderType3, string strategyPairLeg1Symbol, string strategyPairLeg2Symbol, string strategyPairLeg3Symbol)
 {
+	m_StrategyType = strategyType;
+	orderType[0] = strategyOrderType1;
+	orderType[1] = strategyOrderType2;
+	orderType[2] = strategyOrderType3;
 	strcpy_s(m_instId, instId.c_str());
-	kdbConnector.connect("localhost", kdbPort);	
-	std::string kdb_init_string = "h:hopen `::5000;PairFormula:{(x%y)};f:{x%y};bollingerBands: {[k;n;data]      movingAvg: mavg[n;data];    md: sqrt mavg[n;data*data]-movingAvg*movingAvg;      movingAvg+/:(k*-1 0 1)*\\:md};ReceiveTimeToDate:{(\"\"z\"\" $ 1970.01.01+ floor x %86400000000 )+ 08:00:00.000 +\"\"j\"\"$ 0.001* x mod  86400000000};isTable:{if[98h=type x;:1b];if[99h=type x;:98h=type key x];0b};isTable2: {@[{isTable value x}; x; 0b]}; ";
+	kdbConnector.connect("localhost", kdbPort);
+	m_kdbScript = strategykdbscript;
+	m_VolumeTarget = strategyVolumeTarget;
+	string kdb_par_string = "StandardDeviationTimes:" + to_string(par1) + ";" + "WindowFrameLength:" + to_string((int)par2) + ";" + "KindleLengthOnSecond:" + to_string((int)par3) + ";" + "PairLeg1Symbol:" + strategyPairLeg1Symbol + ";" + "PairLeg2Symbol:" + strategyPairLeg2Symbol + ";" + "PairLeg3Symbol:" + strategyPairLeg3Symbol + ";";
+	string kdb_init_string = "h:hopen `::5000;PairFormula:{(x%y)};f:{x%y};bollingerBands: {[k;n;data]      movingAvg: mavg[n;data];    md: sqrt mavg[n;data*data]-movingAvg*movingAvg;      movingAvg+/:(k*-1 0 1)*\\:md};ReceiveTimeToDate:{(\"\"z\"\" $ 1970.01.01+ floor x %86400000000 )+ 08:00:00.000 +\"\"j\"\"$ 0.001* x mod  86400000000};isTable:{if[98h=type x;:1b];if[99h=type x;:98h=type key x];0b};isTable2: {@[{isTable value x}; x; 0b]}; ";
 	kdbConnector.sync(kdb_init_string.c_str());
+	kdbConnector.sync(kdb_par_string.c_str());
 	m_kdbScript = kdbScrpit + m_kdbScript;
 	////////////////////////////////////////////////////
-	/////第一次启动需要手动加载表                  //////
+	/////如果表格不存在设置初始信号为0             //////
 	///////////////////////////////////////////////////
 	kdb::Result res = kdbConnector.sync("isTable2 `ShortLong");
-	//如果表格不存在设置初始信号为0
 	if (res.res_->g)
 	{
 		res = kdbConnector.sync("exec count Signal from ShortLong");
@@ -71,7 +88,7 @@ void Strategy::Init(string instId, int kdbPort, string kdbScrpit)
 	}
 	else
 	{
-		kdbConnector.sync("FinalSignal:([] Date:(); ReceiveDate:(); Symbol:(); LegOneBidPrice1:(); LegOneBidVol1:(); LegOneAskPrice1:(); LegOneAskVol1:(); LegTwoBidPrice1:(); LegTwoBidVol1:(); LegTwoAskPrice1:(); LegTwoAskVol1:(); LegThreeBidPrice1:(); LegThreeBidVol1:(); LegThreeAskPrice1:(); LegThreeAskVol1:(); BidPrice1:(); BidVol1:(); AskPrice1:(); AskVol:(); LowerBand:(); HigherBand:(); Signal:());");
+		kdbConnector.sync("FinalSignal:([] Date:(); ReceiveDate:(); Symbol:(); LegOneBidPrice1:(); LegOneBidVol1:(); LegOneAskPrice1:(); LegOneAskVol1:(); LegTwoBidPrice1:(); LegTwoBidVol1:(); LegTwoAskPrice1:(); LegTwoAskVol1:(); LegThreeBidPrice1:(); LegThreeBidVol1:(); LegThreeAskPrice1:(); LegThreeAskVol1:(); BidPrice1:(); BidVol1:(); AskPrice1:(); AskVol:(); LowerBand:(); HigherBand:(); Signal:());ShortLong:FinalSignal;");
 		kdbConnector.sync(m_kdbScript.c_str());
 		m_ShortLongInitNum = 0;
 

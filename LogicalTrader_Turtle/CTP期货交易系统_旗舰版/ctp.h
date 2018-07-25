@@ -34,7 +34,7 @@ struct ReadMessage
 
 	string m_read_contract;//合约代码
 
-	
+	int m_kdbPort;
 };
 
 
@@ -115,105 +115,60 @@ string return_current_time_and_date1()
 	return (ss.str()).append(".").append(to_string(milliseconds.count()));
 }
 
-//void SetMessage(ReadMessage& readMessage, int kdbPort)//要用引用
-//{
-//	//-------------------------------读取账号模块-------------------------------
-//	CString read_brokerID;
-//	//string read_brokerID;
-//	GetPrivateProfileString("Account","brokerID","brokerID_error",read_brokerID.GetBuffer(MAX_PATH),MAX_PATH,"./input/AccountParam.ini");
-//	
-//	CString read_userId;
-//	GetPrivateProfileString("Account","userId","userId_error",read_userId.GetBuffer(MAX_PATH),MAX_PATH,"./input/AccountParam.ini");
-//
-//	CString read_passwd;
-//	GetPrivateProfileString("Account","passwd","passwd_error",read_passwd.GetBuffer(MAX_PATH),MAX_PATH,"./input/AccountParam.ini");
-//
-//	strcpy_s(readMessage.m_appId, read_brokerID);
-//	strcpy_s(readMessage.m_userId, read_userId);
-//	strcpy_s(readMessage.m_passwd, read_passwd);
-//
-//
-//
-//	//-------------------------------读取地址模块-------------------------------
-//	CString read_MDAddress;
-//	GetPrivateProfileString("FrontAddress","MDAddress","MDAddress_error",read_MDAddress.GetBuffer(MAX_PATH),MAX_PATH,"./input/AccountParam.ini");
-//	
-//	CString read_TDAddress;
-//	GetPrivateProfileString("FrontAddress","TDAddress","TDAddress_error",read_TDAddress.GetBuffer(MAX_PATH),MAX_PATH,"./input/AccountParam.ini");
-//	
-//	strcpy_s(readMessage.m_mdFront, read_MDAddress);
-//	strcpy_s(readMessage.m_tradeFront, read_TDAddress);
-//	
-//
-//	//-------------------------------设置合约模块-------------------------------
-//	CString read_contract;
-//	GetPrivateProfileString("Contract","contract","contract_error",read_contract.GetBuffer(MAX_PATH),MAX_PATH,"./input/AccountParam.ini");
-//	
-//	readMessage.m_read_contract = (LPCTSTR)read_contract;
-//	kdbConnectorSetGet.connect("localhost", kdbPort);
-//	kdbDataSetPath = ExePath(); kdbDataSetPath = kdbDataSetPath.substr(0, kdbDataSetPath.find("CTPTrader")); kdbDataSetPath = replaceAll(kdbDataSetPath, "\\", "/"); kdbScriptExePath = "\\l " + kdbDataSetPath + specificFolderPath; kdbDataGetPath = "Quote: get `:" + kdbDataSetPath + "CTPTrader/Quote;"; kdbDataSetPath = "`:" + kdbDataSetPath + "CTPTrader/Quote set Quote;";
-//	kdbGetData();
-//}
-
-void SetMessage(ReadMessage& readMessage, int kdbPort)
+void SetMessage(ReadMessage& readMessage, int *kdbPort)//要用引用
 {
-	kdbConnectorSetGet.connect("localhost", kdbPort);
+	//kdbConnectorSetGet.connect("localhost", *kdbPort);
 	kdbDataSetPath = ExePath();
-	acountParampath = kdbDataSetPath + "/input/AccountParam.csv";
+	acountParampath = kdbDataSetPath + "/input/AccountParam.ini";
 	acountParampath = replaceAll(acountParampath, "\\", "/");
 	mdflowPath = kdbDataSetPath + "\\MDflow\\";
 	tdflowPath = kdbDataSetPath + "\\TDflow\\";
-	//kdbDataSetPath = kdbDataSetPath.substr(0, kdbDataSetPath.find("CTPTrader")); 
-	kdbDataSetPath = replaceAll(kdbDataSetPath, "\\", "/"); 
-	kdbScriptExePath = "\\l " + kdbDataSetPath + specificFolderPath; 
-	kdbDataGetPath = "Quote: get `:" + kdbDataSetPath + "/Quote;"; 
+	kdbDataSetPath = replaceAll(kdbDataSetPath, "\\", "/");
+	kdbScriptExePath = "\\l " + kdbDataSetPath + specificFolderPath;
+	kdbDataGetPath = "Quote: get `:" + kdbDataSetPath + "/Quote;";
 	kdbDataSetPath = "`:" + kdbDataSetPath + "/Quote set Quote;";
-	kdbGetData();
+	//kdbGetData();
 
-	string infor_line;
-	string infor_cell;
-	cout << "check AccountParam.csv Right" << endl;
-	ifstream Config_Stream(acountParampath);
-	int count_infor = 0;
-	
-	if (Config_Stream.is_open())
-	{
-		getline(Config_Stream, infor_line);
-		stringstream   lineStream(infor_line);
+	//-------------------------------读取账号模块-------------------------------
+	CString read_brokerID;
+	GetPrivateProfileString("Account", "brokerID", "brokerID_error", read_brokerID.GetBuffer(MAX_PATH), MAX_PATH, acountParampath.c_str());
 
-		while (count_infor < 6)
-		{			
-			getline(lineStream, infor_cell, '|');
-			cout << infor_cell << endl;
-			if (count_infor == 0)
-			{	
-				strcpy_s(readMessage.m_appId, infor_cell.c_str());
-			}
-			if (count_infor == 1)
-			{
-				strcpy_s(readMessage.m_userId, infor_cell.c_str());
-			}
-			if (count_infor == 2)
-			{
-				strcpy_s(readMessage.m_passwd, infor_cell.c_str());
-			}
-			if (count_infor == 3)
-			{
-				strcpy_s(readMessage.m_mdFront, infor_cell.c_str());
-			}
-			if (count_infor == 4)
-			{
-				strcpy_s(readMessage.m_tradeFront, infor_cell.c_str());
-			}
-			if (count_infor == 5)
-			{
-				readMessage.m_read_contract = infor_cell;
-			}
+	CString read_userId;
+	GetPrivateProfileString("Account", "userId", "userId_error", read_userId.GetBuffer(MAX_PATH), MAX_PATH, acountParampath.c_str());
 
-			count_infor++;
-		}
-		Config_Stream.close();
-	}
+	CString read_passwd;
+	GetPrivateProfileString("Account", "passwd", "passwd_error", read_passwd.GetBuffer(MAX_PATH), MAX_PATH, acountParampath.c_str());
+
+	strcpy_s(readMessage.m_appId, read_brokerID);
+	strcpy_s(readMessage.m_userId, read_userId);
+	strcpy_s(readMessage.m_passwd, read_passwd);
+
+
+
+	//-------------------------------读取地址模块-------------------------------
+	CString read_MDAddress;
+	GetPrivateProfileString("FrontAddress", "MDAddress", "MDAddress_error", read_MDAddress.GetBuffer(MAX_PATH), MAX_PATH, acountParampath.c_str());
+
+	CString read_TDAddress;
+	GetPrivateProfileString("FrontAddress", "TDAddress", "TDAddress_error", read_TDAddress.GetBuffer(MAX_PATH), MAX_PATH, acountParampath.c_str());
+
+	strcpy_s(readMessage.m_mdFront, read_MDAddress);
+	strcpy_s(readMessage.m_tradeFront, read_TDAddress);
+
+	//-------------------------------设置合约模块-------------------------------
+	CString read_contract;
+	GetPrivateProfileString("Contract", "contract", "contract_error", read_contract.GetBuffer(MAX_PATH), MAX_PATH, "./input/AccountParam.ini");
+
+	readMessage.m_read_contract = (LPCTSTR)read_contract;
+
+	//-------------------------------读取kdb模块-------------------------------
+	CString read_kdbPort;
+	GetPrivateProfileString("DataBaseAddress", "kdbPort", "kdbPort_error", read_kdbPort.GetBuffer(MAX_PATH), MAX_PATH, acountParampath.c_str());
+
+	readMessage.m_kdbPort = atoi(read_kdbPort);
+	*kdbPort = atoi(read_kdbPort);
+	kdbConnectorSetGet.connect("localhost", *kdbPort);
+
 }
 
 void timer_start(std::function<void(void)> func, unsigned int interval)

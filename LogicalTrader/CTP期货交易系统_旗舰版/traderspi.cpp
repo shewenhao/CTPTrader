@@ -436,7 +436,7 @@ void CtpTraderSpi::OnRspQryInvestorPosition(
 				m_trade_message_map[pInvestorPosition->InstrumentID]->TodayPosition_short += pInvestorPosition->TodayPosition;
 
 				//空单昨仓 = 空单持仓量 - 空单今仓
-				m_trade_message_map[pInvestorPosition->InstrumentID]->YdPosition_short += pInvestorPosition->Position - m_trade_message_map[pInvestorPosition->InstrumentID]->TodayPosition_short;
+				m_trade_message_map[pInvestorPosition->InstrumentID]->YdPosition_short += pInvestorPosition->Position - pInvestorPosition->TodayPosition;
 
 				//空单平仓盈亏
 				m_trade_message_map[pInvestorPosition->InstrumentID]->closeProfit_short += pInvestorPosition->CloseProfit;
@@ -670,37 +670,40 @@ void CtpTraderSpi::OnRtnOrder(CThostFtdcOrderField *pOrder)
 	//已撤单成功，可在这边追单
 	if(order->OrderStatus == '5')
 	{
+		string strOrderRef = order->OrderRef;
 		TThostFtdcInstrumentIDType    instId;//合约,合约代码在结构体里已经有了
 		TThostFtdcDirectionType       dir;//方向,'0'买，'1'卖
 		TThostFtdcCombOffsetFlagType  kpp;//开平，"0"开，"1"平,"3"平今
-		TThostFtdcPriceType           price;//价格，0是市价,上期所不支持
+		TThostFtdcPriceType           price = 0;//价格，0是市价,上期所不支持
 		TThostFtdcVolumeType          vol;//数量
-
 		strcpy(instId, order->InstrumentID);
+		string instIdStr(instId);
 		dir = order->Direction;
 		strcpy(kpp, order->CombOffsetFlag);
-
-		if(order->Direction == '0')
-			price = order->LimitPrice + 10;
-		else if(order->Direction == '1')
-			price = order->LimitPrice - 10;
-
 		vol = order->VolumeTotal;//要用剩余数量
-		string instIdStr(instId);
-		string strOrderRef = order->OrderRef;
-		if (m_frontsessionref_ordertype.find(to_string(frontId) + to_string(sessionId) + strOrderRef) == m_frontsessionref_ordertype.end())
+		if (order->FrontID == frontId && order->SessionID == sessionId)
 		{
+			if (m_frontsessionref_frontsessionref.find(to_string(frontId) + to_string(sessionId) + strOrderRef) == m_frontsessionref_frontsessionref.end())
+			{
+				if (m_frontsessionref_ordertype.find(to_string(frontId) + to_string(sessionId) + strOrderRef) == m_frontsessionref_ordertype.end())
+				{
 
-		}
-		else
-		{
-			SendOrderDecoration(instId, Send_TThostFtdcCombOffsetFlagType(instIdStr.substr(0, 2)), dir, &kpp, price, vol, m_frontsessionref_ordertype[to_string(frontId) + to_string(sessionId) + strOrderRef], pDepthMarketDataTD);
+				}
+				else
+				{
+					SendOrderDecoration(instId, Send_TThostFtdcCombOffsetFlagType(instIdStr.substr(0, 2)), dir, &kpp, price, vol, m_frontsessionref_ordertype[to_string(frontId) + to_string(sessionId) + strOrderRef], pDepthMarketDataTD);
+					m_frontsessionref_frontsessionref.insert(pair<string, CThostFtdcOrderField*>(to_string(frontId) + to_string(sessionId) + strOrderRef, pOrder));
+
+				}
+
+			}
+			else
+			{
+
+			}
 		}
 
-		//ReqOrderInsert(instId,dir,kpp,price,vol);
 	}
-
-
 	SetEvent(g_hEvent);	
 
 }
@@ -773,26 +776,29 @@ void CtpTraderSpi::OnRtnTrade(CThostFtdcTradeField *pTrade)
 			founded=true;   break;
 		}
 	}
-	if(founded) tradeList[i] = trade_account;//多手数分多次成交会有多次的成交通知，但每次成交编号都不一样 
-	else  tradeList.push_back(trade_account);
+	if (founded)
+	{
+		tradeList[i] = trade_account;//多手数分多次成交会有多次的成交通知，但每次成交编号都不一样
+	}		 
+	else
+	{
+		tradeList.push_back(trade_account);
+	}
 
-
-
-
-	cerr<<endl
-		<<" 回报 | 报单已成交...成交编号:"<<trade_account->TradeID
-		<<" 报单编号:"<<trade_account->OrderSysID
-		<<" 合约代码:"<<trade_account->InstrumentID
-		<<" 买卖方向:"<<trade_account->Direction
-		<<" 开平标志:"<<trade_account->OffsetFlag
-		<<" 投机套保标志:"<<trade_account->HedgeFlag
-		<<" 价格:"<<trade_account->Price
-		<<" 数量:"<<trade_account->Volume
-		<<" 成交时期:"<<trade_account->TradeDate
-		<<" 成交时间:"<<trade_account->TradeTime
-		<<" 经纪公司代码:"<<trade_account->BrokerID
-		<<" 投资者代码:"<<trade_account->InvestorID//也是userId
-		<<endl;
+	cerr << endl
+		<< " 回报 | 报单已成交...成交编号:" << trade_account->TradeID
+		<< " 报单编号:" << trade_account->OrderSysID
+		<< " 合约代码:" << trade_account->InstrumentID
+		<< " 买卖方向:" << trade_account->Direction
+		<< " 开平标志:" << trade_account->OffsetFlag
+		<< " 投机套保标志:" << trade_account->HedgeFlag
+		<< " 价格:" << trade_account->Price
+		<< " 数量:" << trade_account->Volume
+		<< " 成交时期:" << trade_account->TradeDate
+		<< " 成交时间:" << trade_account->TradeTime
+		<< " 经纪公司代码:" << trade_account->BrokerID
+		<< " 投资者代码:" << trade_account->InvestorID//也是userId
+		<< endl;
 
 
 
@@ -805,9 +811,9 @@ void CtpTraderSpi::OnRtnTrade(CThostFtdcTradeField *pTrade)
 
 	//若是开仓单，则保存到tradeList_notClosed_account_long和tradeList_notClosed_account_short
 
-	if(trade_account->OffsetFlag == '0')//开仓
+	if (trade_account->OffsetFlag == '0')//开仓
 	{
-		if(trade_account->Direction == '0')//多单
+		if (trade_account->Direction == '0')//多单
 		{
 			//多单持仓表增加记录
 			tradeList_notClosed_account_long.push_back(trade_account);
@@ -816,7 +822,7 @@ void CtpTraderSpi::OnRtnTrade(CThostFtdcTradeField *pTrade)
 			//多单今日持仓
 			m_trade_message_map[trade_account->InstrumentID]->TodayPosition_long = m_trade_message_map[trade_account->InstrumentID]->TodayPosition_long + trade_account->Volume;
 		}
-		else if(trade_account->Direction == '1')//空单
+		else if (trade_account->Direction == '1')//空单
 		{
 			//空单持仓表增加记录
 			tradeList_notClosed_account_short.push_back(trade_account);
@@ -827,39 +833,37 @@ void CtpTraderSpi::OnRtnTrade(CThostFtdcTradeField *pTrade)
 		}
 	}
 	//平仓单，删除记录
-	else if(trade_account->OffsetFlag == '1' || trade_account->OffsetFlag == '3')//1是平仓，3是平今
+	else if (trade_account->OffsetFlag == '1' || trade_account->OffsetFlag == '3' || trade_account->OffsetFlag == '4')//1是平仓，3是平今
 	{
-		if(trade_account->Direction == '1')//卖，表示平多,有昨仓和今仓时，按时间顺序，先平昨仓
+		if (trade_account->Direction == '1')//卖，表示平多,有昨仓和今仓时，按时间顺序，先平昨仓
 		{
 			close_num_account_long = trade_account->Volume;
 
-			for(vector<CThostFtdcTradeField*>::iterator iter = tradeList_notClosed_account_long.begin(); iter != tradeList_notClosed_account_long.end(); iter++)
+			for (vector<CThostFtdcTradeField*>::iterator iter = tradeList_notClosed_account_long.begin(); iter != tradeList_notClosed_account_long.end(); iter++)
 			{
-				if(strcmp(trade_account->InstrumentID, (*iter)->InstrumentID) == 0)
+				if (strcmp(trade_account->InstrumentID, (*iter)->InstrumentID) == 0)
 				{
-					if((*iter)->Volume < close_num_account_long)//没有忽略掉tradeList_notClosed中数量为0的单子，但不影响计算结果
+					if ((*iter)->Volume < close_num_account_long)//没有忽略掉tradeList_notClosed中数量为0的单子，但不影响计算结果
 					{
 						close_num_account_long -= (*iter)->Volume;
 						//平仓盈亏
 						m_trade_message_map[trade_account->InstrumentID]->closeProfit_long = m_trade_message_map[trade_account->InstrumentID]->closeProfit_long + (trade_account->Price - (*iter)->Price) * (*iter)->Volume * m_instMessage_map[trade_account->InstrumentID]->VolumeMultiple;
 						(*iter)->Volume = 0;
 					}
-					else if((*iter)->Volume == close_num_account_long)
+					else if ((*iter)->Volume == close_num_account_long)
 					{
-						(*iter)->Volume =0;
+						(*iter)->Volume = 0;
 						//平仓盈亏
-						m_trade_message_map[trade_account->InstrumentID]->closeProfit_long = m_trade_message_map[trade_account->InstrumentID]->closeProfit_long + (trade_account->Price - (*iter)->Price) * close_num_account_long * m_instMessage_map[trade_account->InstrumentID]->VolumeMultiple; 
+						m_trade_message_map[trade_account->InstrumentID]->closeProfit_long = m_trade_message_map[trade_account->InstrumentID]->closeProfit_long + (trade_account->Price - (*iter)->Price) * close_num_account_long * m_instMessage_map[trade_account->InstrumentID]->VolumeMultiple;
 						break;
 					}
-					else if((*iter)->Volume > close_num_account_long)
+					else if ((*iter)->Volume > close_num_account_long)
 					{
 						(*iter)->Volume = (*iter)->Volume - close_num_account_long;
 						//平仓盈亏
-						m_trade_message_map[trade_account->InstrumentID]->closeProfit_long = m_trade_message_map[trade_account->InstrumentID]->closeProfit_long + (trade_account->Price - (*iter)->Price) * close_num_account_long * m_instMessage_map[trade_account->InstrumentID]->VolumeMultiple; 
+						m_trade_message_map[trade_account->InstrumentID]->closeProfit_long = m_trade_message_map[trade_account->InstrumentID]->closeProfit_long + (trade_account->Price - (*iter)->Price) * close_num_account_long * m_instMessage_map[trade_account->InstrumentID]->VolumeMultiple;
 						break;
 					}
-
-
 
 				}
 			}
@@ -870,34 +874,32 @@ void CtpTraderSpi::OnRtnTrade(CThostFtdcTradeField *pTrade)
 
 
 			//今仓量和昨仓量，只对上期所有效
-			if(trade_account->OffsetFlag == '1')
+			if (trade_account->OffsetFlag == '1' || trade_account->OffsetFlag == '4')
 				m_trade_message_map[trade_account->InstrumentID]->YdPosition_long = m_trade_message_map[trade_account->InstrumentID]->YdPosition_long - trade_account->Volume;//昨仓
-			else if(trade_account->OffsetFlag == '3')
+			else if (trade_account->OffsetFlag == '3')
 				m_trade_message_map[trade_account->InstrumentID]->TodayPosition_long = m_trade_message_map[trade_account->InstrumentID]->TodayPosition_long - trade_account->Volume;//今仓
 
 
 			//假设今仓5手，昨仓1，平仓都是发'1'，假设平仓2手，导致昨仓是-1，今仓还是5手，实际应该是今仓5-1，昨仓0
 			//3手昨仓，5手今仓，，'1'平仓了4手,导致昨仓是-1，今仓还是5手，实际应该是今仓5-1，昨仓0
 
-			if(m_trade_message_map[trade_account->InstrumentID]->YdPosition_long < 0)
+			if (m_trade_message_map[trade_account->InstrumentID]->YdPosition_long < 0)
 			{
 				m_trade_message_map[trade_account->InstrumentID]->TodayPosition_long = m_trade_message_map[trade_account->InstrumentID]->TodayPosition_long + m_trade_message_map[trade_account->InstrumentID]->YdPosition_long;
 				m_trade_message_map[trade_account->InstrumentID]->YdPosition_long = 0;
 
 			}
 
-
-
 		}
-		else if(trade_account->Direction == '0')//平空
+		else if (trade_account->Direction == '0')//平空
 		{
 			close_num_account_short = trade_account->Volume;
 
-			for(vector<CThostFtdcTradeField*>::iterator iter = tradeList_notClosed_account_short.begin(); iter != tradeList_notClosed_account_short.end(); iter++)
+			for (vector<CThostFtdcTradeField*>::iterator iter = tradeList_notClosed_account_short.begin(); iter != tradeList_notClosed_account_short.end(); iter++)
 			{
-				if(strcmp(trade_account->InstrumentID, (*iter)->InstrumentID) == 0)
+				if (strcmp(trade_account->InstrumentID, (*iter)->InstrumentID) == 0)
 				{
-					if((*iter)->Volume < close_num_account_short)//没有忽略掉tradeList_notClosed中数量为0的单子，但不影响计算结果
+					if ((*iter)->Volume < close_num_account_short)//没有忽略掉tradeList_notClosed中数量为0的单子，但不影响计算结果
 					{
 						close_num_account_short -= (*iter)->Volume;
 						//平仓盈亏
@@ -905,7 +907,7 @@ void CtpTraderSpi::OnRtnTrade(CThostFtdcTradeField *pTrade)
 						(*iter)->Volume = 0;
 					}
 
-					else if((*iter)->Volume == close_num_account_short)
+					else if ((*iter)->Volume == close_num_account_short)
 					{
 						(*iter)->Volume = 0;
 						//平仓盈亏
@@ -913,7 +915,7 @@ void CtpTraderSpi::OnRtnTrade(CThostFtdcTradeField *pTrade)
 						break;
 					}
 
-					else if((*iter)->Volume > close_num_account_short)
+					else if ((*iter)->Volume > close_num_account_short)
 					{
 						(*iter)->Volume = (*iter)->Volume - close_num_account_short;
 						//平仓盈亏
@@ -934,13 +936,13 @@ void CtpTraderSpi::OnRtnTrade(CThostFtdcTradeField *pTrade)
 
 
 			//今仓量和昨仓量，只对上期所有效
-			if(trade_account->OffsetFlag == '1')
+			if (trade_account->OffsetFlag == '1' || trade_account->OffsetFlag == '4')
 				m_trade_message_map[trade_account->InstrumentID]->YdPosition_short = m_trade_message_map[trade_account->InstrumentID]->YdPosition_short - trade_account->Volume;//昨仓
-			else if(trade_account->OffsetFlag == '3')
+			else if (trade_account->OffsetFlag == '3')
 				m_trade_message_map[trade_account->InstrumentID]->TodayPosition_short = m_trade_message_map[trade_account->InstrumentID]->TodayPosition_short - trade_account->Volume;//今仓
 
 
-			if(m_trade_message_map[trade_account->InstrumentID]->YdPosition_short < 0)
+			if (m_trade_message_map[trade_account->InstrumentID]->YdPosition_short < 0)
 			{
 				m_trade_message_map[trade_account->InstrumentID]->TodayPosition_short = m_trade_message_map[trade_account->InstrumentID]->TodayPosition_short + m_trade_message_map[trade_account->InstrumentID]->YdPosition_short;
 				m_trade_message_map[trade_account->InstrumentID]->YdPosition_short = 0;
@@ -948,8 +950,8 @@ void CtpTraderSpi::OnRtnTrade(CThostFtdcTradeField *pTrade)
 			}
 		}
 
-	}
 
+	}
 
 }
 
@@ -1137,6 +1139,8 @@ void CtpTraderSpi::setAccount(TThostFtdcBrokerIDType	appId,	TThostFtdcUserIDType
 void CtpTraderSpi::MaintainOrder(const string& MDtime, double MDprice)
 {
 	string InsertTime_str;
+	double TargetPrice;
+	double SetPrice;
 	int MDtime_last2;
 
 	if (orderList.size() > 0)
@@ -1146,104 +1150,41 @@ void CtpTraderSpi::MaintainOrder(const string& MDtime, double MDprice)
 
 	for (vector<CThostFtdcOrderField*>::iterator iter = orderList.begin(); iter != orderList.end(); iter++)//倒序遍历，break
 	{
-				
-		/*cout<<"合约:"<<(*iter)->InstrumentID<<" 报单引用OrderRef:"<<(*iter)->OrderRef<<" 前置编号FrontID:"<<(*iter)->FrontID<<" 会话编号SessionID:"<<(*iter)->SessionID
-		<<" 报单状态:"<<(*iter)->OrderStatus<<" 经纪公司报单编号:"<<(*iter)->BrokerOrderSeq
-		<<endl;*/
 		if ((*iter)->OrderStatus == '3' || (*iter)->OrderStatus == '1')//未成交还在队列中,部分成交还在队列中
 		{
-
-			InsertTime_str = (*iter)->InsertTime;//委托时间"21:47:01"
-
-			MDtime_last2 = atoi(MDtime.substr(6, 2).c_str());
-
-			if( MDtime_last2 < atoi(InsertTime_str.substr(6, 2).c_str()))//行情时间最后两位小于委托时间的最后两位
-				MDtime_last2 += 60;//行情时间加60秒
-
-			if(MDtime_last2 - atoi(InsertTime_str.substr(6, 2).c_str()) >= 10)//委托大于10秒未成交
+			if ((*iter)->FrontID == frontId && (*iter)->SessionID == sessionId)
 			{
-				cerr<<"撤单:"<<endl;
-				//撤单
-				ReqOrderAction((*iter)->BrokerOrderSeq);
+				string strOrderRef = (*iter)->OrderRef;
+				SetPrice = (*iter)->LimitPrice;
+				if (m_frontsessionref_frontsessionref.find(to_string(frontId) + to_string(sessionId) + strOrderRef) == m_frontsessionref_frontsessionref.end())
+				{
+					if (m_frontsessionref_ordertype.find(to_string(frontId) + to_string(sessionId) + strOrderRef) == m_frontsessionref_ordertype.end())
+					{
 
-				//重新发委托，应该在撤单成功后再进行
+					}
+					else
+					{
+						CheckOrderPosition((*iter)->InstrumentID, (*iter)->Direction, &TargetPrice, m_frontsessionref_ordertype[to_string(frontId) + to_string(sessionId) + strOrderRef], pDepthMarketDataTD);
+						InsertTime_str = (*iter)->InsertTime;//委托时间"21:47:01"
 
-				//strcpy(instId, (*iter)->InstrumentID);
-				//dir = (*iter)->Direction;
-				//strcpy(kpp, (*iter)->CombOffsetFlag);
+						MDtime_last2 = atoi(MDtime.substr(6, 2).c_str());
 
-				//if((*iter)->Direction == '0')
-				//	price = MDprice + 10;
-				//else if((*iter)->Direction == '1')
-				//	price = MDprice - 10;
+						if (MDtime_last2 < atoi(InsertTime_str.substr(6, 2).c_str()))//行情时间最后两位小于委托时间的最后两位
+							MDtime_last2 += 60;//行情时间加60秒
 
-				//vol = (*iter)->VolumeTotal;//要用剩余数量
+						int OrderAdjustMode = m_frontsessionref_ordertype[to_string(frontId) + to_string(sessionId) + strOrderRef][2];
+						if (MDtime_last2 - atoi(InsertTime_str.substr(6, 2).c_str()) >= OrderAdjustMode && SetPrice != TargetPrice)//委托大于该订单规定的秒数未成交
+						{
+							cerr << "撤单:" << endl;
+							//撤单
+							ReqOrderAction((*iter)->BrokerOrderSeq);
 
-				//cerr<<"重新发单:"<<endl;
-				//ReqOrderInsert(instId,dir,kpp,price,vol);
-
+						}
+					}
+				}
 			}
 		}				
 	}
-	//string InsertTime_str;//委托时间
-
-	////TThostFtdcInstrumentIDType    instId;//合约,合约代码在结构体里已经有了
-	////TThostFtdcDirectionType       dir;//方向,'0'买，'1'卖
-	////TThostFtdcCombOffsetFlagType  kpp;//开平，"0"开，"1"平,"3"平今
-	////TThostFtdcPriceType           price;//价格，0是市价,上期所不支持
-	////TThostFtdcVolumeType          vol;//数量
-
-	//int MDtime_last2;
-
-	//if(orderList.size() > 0)
-	//{
-	//	//cerr<<"orderList.size():"<<orderList.size()<<endl;
-	//	for(vector<CThostFtdcOrderField*>::iterator iter = orderList.begin(); iter != orderList.end(); iter++)//倒序遍历，break
-	//	{
-	//		/*
-	//		cout<<"合约:"<<(*iter)->InstrumentID<<" 报单引用OrderRef:"<<(*iter)->OrderRef<<" 前置编号FrontID:"<<(*iter)->FrontID<<" 会话编号SessionID:"<<(*iter)->SessionID
-	//		<<" 报单状态:"<<(*iter)->OrderStatus<<" 经纪公司报单编号:"<<(*iter)->BrokerOrderSeq
-	//		<<endl;
-	//		*/
-
-	//		if((*iter)->OrderStatus == '3' || (*iter)->OrderStatus == '1')//未成交还在队列中,部分成交还在队列中
-	//		{
-
-	//			InsertTime_str = (*iter)->InsertTime;//委托时间"21:47:01"
-
-	//			MDtime_last2 = atoi(MDtime.substr(6, 2).c_str());
-
-	//			if( MDtime_last2 < atoi(InsertTime_str.substr(6, 2).c_str()))//行情时间最后两位小于委托时间的最后两位
-	//				MDtime_last2 += 60;//行情时间加60秒
-
-	//			if(MDtime_last2 - atoi(InsertTime_str.substr(6, 2).c_str()) >= 6)//委托大于6秒未成交
-	//			{
-	//				cerr<<"撤单:"<<endl;
-	//				//撤单
-	//				ReqOrderAction((*iter)->BrokerOrderSeq);
-
-	//				//重新发委托，应该在撤单成功后再进行
-
-	//				//strcpy(instId, (*iter)->InstrumentID);
-	//				//dir = (*iter)->Direction;
-	//				//strcpy(kpp, (*iter)->CombOffsetFlag);
-
-	//				//if((*iter)->Direction == '0')
-	//				//	price = MDprice + 10;
-	//				//else if((*iter)->Direction == '1')
-	//				//	price = MDprice - 10;
-
-	//				//vol = (*iter)->VolumeTotal;//要用剩余数量
-
-	//				//cerr<<"重新发单:"<<endl;
-	//				//ReqOrderInsert(instId,dir,kpp,price,vol);
-
-	//			}
-
-
-	//		}
-	//	}
-	//}
 }
 
 
@@ -1913,6 +1854,7 @@ string CtpTraderSpi::Send_TThostFtdcCombOffsetFlagType(string instID)
 void CtpTraderSpi::Set_CThostFtdcDepthMarketDataField(CThostFtdcDepthMarketDataField *pDepthMarketData)
 {
 	pDepthMarketDataTD = pDepthMarketData;
+	/*m_pDepthMarketData_type.insert(std::pair<string, CThostFtdcDepthMarketDataField*>(to_string(frontId) + to_string(sessionId), pDepthMarketData));*/
 }
 
 void CtpTraderSpi::SendOrderDecoration(TThostFtdcInstrumentIDType instId, string order_type, TThostFtdcDirectionType dir, TThostFtdcCombOffsetFlagType * kpp, TThostFtdcPriceType price, TThostFtdcVolumeType vol, vector<int> orderType, CThostFtdcDepthMarketDataField *pDepthMarketData)
@@ -1920,7 +1862,7 @@ void CtpTraderSpi::SendOrderDecoration(TThostFtdcInstrumentIDType instId, string
 	string strOrderRef = orderRef;
 	m_frontsessionref_ordertype.insert (std::pair<string, vector<int>>(to_string(frontId) + to_string(sessionId) + strOrderRef, orderType));
 	m_frontsessionref_order_type.insert(std::pair<string, string>(to_string(frontId) + to_string(sessionId) + strOrderRef, order_type));
-	price = CheckOrderPosition(instId, dir, price, orderType, pDepthMarketData);
+	CheckOrderPosition(instId, dir, &price, orderType, pDepthMarketData);
 
 	#pragma region CLOSE_TODAY_YD_OPEN
 		if (order_type == "CLOSE_TODAY_YD_OPEN")

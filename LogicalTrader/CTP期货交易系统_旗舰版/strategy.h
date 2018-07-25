@@ -31,7 +31,7 @@ public:
 	void OnTickData(CThostFtdcDepthMarketDataField *pDepthMarketData);
 
 	//设置交易的合约代码
-	void Init(string instId, int kdbPort, string kdbScript);
+	void Init(string strategyType, string instId, int kdbPort, string kdbScript, int strategyVolumeTarget, string strategykdbscript, double par1, double par2, double par3, double par4, double par5, double par6, int strategyOrderType1, int strategyOrderTyep2, int strategyOrderType3, string strategyPairLeg1Symbol, string strategyPairLeg2Symbol, string strategyPairLeg3Symbol);
 	
 	//策略主逻辑的计算，70条行情里涨了0.6元，则做多，下跌则做空（系统默认禁止开仓，可在界面输入"yxkc"来允许开仓）
 	void StrategyCalculate(CThostFtdcDepthMarketDataField *pDepthMarketData);

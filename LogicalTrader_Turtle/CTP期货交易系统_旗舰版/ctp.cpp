@@ -50,7 +50,7 @@ int main(int argc, const char* argv[])
 	//--------------读取配置文件，获取账户信息、服务器地址、交易的合约代码--------------
 	ReadMessage readMessage;
 	memset(&readMessage, 0, sizeof(readMessage));
-	SetMessage(readMessage, kdbPort);
+	SetMessage(readMessage, &kdbPort);
 	
 
 	//--------------初始化行情UserApi，创建行情API实例----------------------------------

@@ -303,3 +303,6 @@ ShortLong:select from QuoteDataKindle;update Signal: 0N from `ShortLong;
 h:hopen `::5000;PairFormula:{(x%y)};f:{x%y};bollingerBands: {[k;n;data]      movingAvg: mavg[n;data];    md: sqrt mavg[n;data*data]-movingAvg*movingAvg;      movingAvg+/:(k*-1 0 1)*\\:md};;isTable:{if[98h=type x;:1b];if[99h=type x;:98h=type key x];0b};isTable2: {@[{isTable value x}; x; 0b]};isTable:{if[98h=type x;:1b];if[99h=type x;:98h=type key x];0b};isTable2: {@[{isTable value x}; x; 0b]};PairFormulaDValue:{[x;mx;y;my] (x*mx) - (y*my)};PositionAddedTimes:0;;LocalHigh:-99999999;LocalLow:99999999;DrawBack: 0.0;
 
 TrailShortLong:-1#select from QuoteDataKindle;update Signal:0 from `TrailShortLong;ShortLong: ShortLong, TrailShortLong;
+
+ShortLong: get `:c:/q/ShortLong
+TrailShortLong:-1#select from ShortLong;update Signal:-1 from `TrailShortLong;ShortLong: ShortLong, TrailShortLong;

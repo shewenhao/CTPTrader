@@ -20,6 +20,15 @@
 #include <cstdio>
 
 
+int strategyVolumeTarget;
+
+string strategykdbscript;
+
+double par1, par2, par3, par4, par5, par6;
+
+int strategyOrderType1, strategyOrderType2, strategyOrderType3;
+
+string strategyPairLeg1Symbol, strategyPairLeg2Symbol, strategyPairLeg3Symbol;
 
 int kdbPort;
 
@@ -40,16 +49,19 @@ DWORD WINAPI ThreadProc(LPVOID lpParameter);
 
 int main(int argc, const char* argv[])
 {
-
+	
+	string strategyAccountParampath = argv[1];
+	//string strategyAccountParampath = "AccountParam.ini";
 	g_hEvent=CreateEvent(NULL, true, false, NULL); 
-
-	SetConsoleTitle("CTP期货交易系统_旗舰版");
 
 	//--------------读取配置文件，获取账户信息、服务器地址、交易的合约代码--------------
 	ReadMessage readMessage;
 	memset(&readMessage, 0, sizeof(readMessage));
-	SetMessage(readMessage, &kdbPort);
-	kdbGetData();
+	SetMessage(readMessage, &kdbPort, &strategyVolumeTarget, &strategykdbscript, &par1, &par2, &par3, &par4, &par5, &par6, &strategyOrderType1, &strategyOrderType2, &strategyOrderType3, strategyAccountParampath, &strategyPairLeg1Symbol, &strategyPairLeg2Symbol, &strategyPairLeg3Symbol);	
+
+	SetConsoleTitle(("CTP" + to_string(kdbPort)).c_str());
+
+	
 	
 
 	//--------------初始化行情UserApi，创建行情API实例----------------------------------
@@ -79,7 +91,7 @@ int main(int argc, const char* argv[])
 
 	//--------------创建策略实例--------------------------------------------------------
 	g_strategy = new Strategy(pUserSpi_trade);
-	g_strategy->Init(readMessage.m_read_contract, kdbPort, kdbScriptExePath);
+	g_strategy->Init(readMessage.m_strategy_strategytype, readMessage.m_read_contract, kdbPort, kdbScriptExePath, strategyVolumeTarget, strategykdbscript, par1, par2, par3, par4, par5, par6, strategyOrderType1, strategyOrderType2, strategyOrderType3, strategyPairLeg1Symbol,strategyPairLeg2Symbol, strategyPairLeg2Symbol);
 	
 
 
@@ -96,10 +108,19 @@ int main(int argc, const char* argv[])
 	WaitForSingleObject(hThread1, INFINITE);
 	
 
-	timer_start(kdbSetData, 60000);
-	pUserApi_md->Join();//等待接口线程退出
-	pUserApi_trade->Join();	
-	while (true);
+	if (readMessage.m_strategy_strategytype == "Quote")
+	{
+		timer_start(kdbSetData, 60000);
+		pUserApi_md->Join();//等待接口线程退出
+		pUserApi_trade->Join();
+		while (true);
+	}
+	else
+	{
+		pUserApi_md->Join();//等待接口线程退出
+		pUserApi_trade->Join();
+	}
+	
 }
 
 
