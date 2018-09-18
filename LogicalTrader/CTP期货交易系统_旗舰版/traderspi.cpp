@@ -527,7 +527,7 @@ void CtpTraderSpi::ReqOrderInsert(TThostFtdcInstrumentIDType instId,
 	int nextOrderRef = atoi(orderRef);
 	sprintf(orderRef, "%d", ++nextOrderRef);
 	
-
+	 
 	req.LimitPrice = price;	//价格
 	if(0==req.LimitPrice){
 		req.OrderPriceType = THOST_FTDC_OPT_AnyPrice;//价格类型=市价
@@ -1936,9 +1936,31 @@ void CtpTraderSpi::SendOrderDecoration(TThostFtdcInstrumentIDType instId, string
 				{
 					this->ReqOrderInsert(instId, dir, "1", price, vol);
 				}
-				else if (vol > this->SendYdHolding_short(instId) && vol > this->SendTodayHolding_short(instId))
+				else if (vol > this->SendYdHolding_short(instId) && vol > this->SendTodayHolding_short(instId) && vol <= (this->SendTodayHolding_short(instId) + this->SendYdHolding_short(instId)))
 				{
-					this->ReqOrderInsert(instId, dir, "0", price, vol);
+					this->ReqOrderInsert(instId, dir, "3", price, this->SendTodayHolding_short(instId));
+					
+					strOrderRef = orderRef;
+					m_frontsessionref_ordertype.insert(std::pair<string, vector<int>>(to_string(frontId) + to_string(sessionId) + strOrderRef, orderType));
+					m_frontsessionref_order_type.insert(std::pair<string, string>(to_string(frontId) + to_string(sessionId) + strOrderRef, order_type));
+					CheckOrderPosition(instId, dir, askprice, bidprice, &price, orderType, pDepthMarketData);
+					this->ReqOrderInsert(instId, dir, "1", price, this->SendYdHolding_short(instId));
+				}
+				else if (vol > this->SendYdHolding_short(instId) && vol > this->SendTodayHolding_short(instId) && vol > (this->SendTodayHolding_short(instId) + this->SendYdHolding_short(instId)))
+				{
+					this->ReqOrderInsert(instId, dir, "3", price, this->SendTodayHolding_short(instId));
+
+					strOrderRef = orderRef;
+					m_frontsessionref_ordertype.insert(std::pair<string, vector<int>>(to_string(frontId) + to_string(sessionId) + strOrderRef, orderType));
+					m_frontsessionref_order_type.insert(std::pair<string, string>(to_string(frontId) + to_string(sessionId) + strOrderRef, order_type));
+					CheckOrderPosition(instId, dir, askprice, bidprice, &price, orderType, pDepthMarketData);
+					this->ReqOrderInsert(instId, dir, "1", price, this->SendYdHolding_short(instId));
+					
+					strOrderRef = orderRef;
+					m_frontsessionref_ordertype.insert(std::pair<string, vector<int>>(to_string(frontId) + to_string(sessionId) + strOrderRef, orderType));
+					m_frontsessionref_order_type.insert(std::pair<string, string>(to_string(frontId) + to_string(sessionId) + strOrderRef, order_type));
+					CheckOrderPosition(instId, dir, askprice, bidprice, &price, orderType, pDepthMarketData);
+					this->ReqOrderInsert(instId, dir, "0", price, vol - this->SendYdHolding_short(instId) - this->SendTodayHolding_short(instId));
 				}
 			}
 			else if (dir == '1')
@@ -1951,9 +1973,32 @@ void CtpTraderSpi::SendOrderDecoration(TThostFtdcInstrumentIDType instId, string
 				{
 					this->ReqOrderInsert(instId, dir, "1", price, vol);
 				}
-				else if (vol > this->SendYdHolding_long(instId) && vol > this->SendTodayHolding_long(instId))
+				else if (vol > this->SendYdHolding_long(instId) && vol > this->SendTodayHolding_long(instId) && vol <= (this->SendTodayHolding_long(instId) + this->SendYdHolding_long(instId)))
 				{
-					this->ReqOrderInsert(instId, dir, "0", price, vol);
+					this->ReqOrderInsert(instId, dir, "3", price, this->SendYdHolding_long(instId));
+
+					strOrderRef = orderRef;
+					m_frontsessionref_ordertype.insert(std::pair<string, vector<int>>(to_string(frontId) + to_string(sessionId) + strOrderRef, orderType));
+					m_frontsessionref_order_type.insert(std::pair<string, string>(to_string(frontId) + to_string(sessionId) + strOrderRef, order_type));
+					CheckOrderPosition(instId, dir, askprice, bidprice, &price, orderType, pDepthMarketData);
+					this->ReqOrderInsert(instId, dir, "1", price, this->SendYdHolding_short(instId));
+				}
+				else if (vol > this->SendYdHolding_long(instId) && vol > this->SendTodayHolding_long(instId) && vol > (this->SendTodayHolding_long(instId) + this->SendYdHolding_long(instId)))
+				{
+					this->ReqOrderInsert(instId, dir, "3", price, this->SendTodayHolding_short(instId));
+
+					strOrderRef = orderRef;
+					m_frontsessionref_ordertype.insert(std::pair<string, vector<int>>(to_string(frontId) + to_string(sessionId) + strOrderRef, orderType));
+					m_frontsessionref_order_type.insert(std::pair<string, string>(to_string(frontId) + to_string(sessionId) + strOrderRef, order_type));
+					CheckOrderPosition(instId, dir, askprice, bidprice, &price, orderType, pDepthMarketData);
+					this->ReqOrderInsert(instId, dir, "1", price, this->SendYdHolding_short(instId));
+
+					strOrderRef = orderRef;
+					m_frontsessionref_ordertype.insert(std::pair<string, vector<int>>(to_string(frontId) + to_string(sessionId) + strOrderRef, orderType));
+					m_frontsessionref_order_type.insert(std::pair<string, string>(to_string(frontId) + to_string(sessionId) + strOrderRef, order_type));
+					CheckOrderPosition(instId, dir, askprice, bidprice, &price, orderType, pDepthMarketData);
+					this->ReqOrderInsert(instId, dir, "0", price, vol - this->SendYdHolding_short(instId) - this->SendTodayHolding_short(instId));
+
 				}
 			}
 		}
