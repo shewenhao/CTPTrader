@@ -60,6 +60,8 @@ public:
 	//获得当前时间为kdb+数据插入使用
 	std::string return_current_time_and_date();
 
+	
+
 private:
 
 	CtpTraderSpi* TDSpi_stgy;//TD指针

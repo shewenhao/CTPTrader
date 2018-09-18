@@ -68,6 +68,8 @@ void CtpMdSpi::OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin,
 
 		//SubscribeMarketData_all();//订阅全市场行情
 
+		strcpy(m_instId, m_instId_string.c_str());
+
 		SubscribeMarketData(m_instId);//订阅交易合约的行情
 
 		//订阅持仓合约的行情
@@ -180,7 +182,8 @@ void CtpMdSpi::setAccount(TThostFtdcBrokerIDType	appId1,	TThostFtdcUserIDType	us
 //设置交易的合约代码
 void CtpMdSpi::setInstId(string instId)
 {
-	strcpy(m_instId, instId.c_str());
+	m_instId_string = instId;
+	strcpy(m_instId, m_instId_string.c_str());
 }
 
 

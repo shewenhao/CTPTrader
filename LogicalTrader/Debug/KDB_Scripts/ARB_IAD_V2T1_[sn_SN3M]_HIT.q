@@ -52,5 +52,5 @@ delete from `FinalSignal where Date.minute > 00:59:55, Date.minute < 09:00:05;
 delete from `FinalSignal where Date.minute > 10:14:55, Date.minute < 10:30:05;
 delete from `FinalSignal where Date.minute > 11:29:55, Date.minute < 13:30:05;
 delete from `FinalSignal where Date.minute > 14:59:55, Date.minute < 21:00:05;
-//ShortLong:select from FinalSignal  where (Signal<>(prev Signal));
-//FinalSignal:ShortLong;
+ShortLong:select from FinalSignal  where (Signal<>(prev Signal));
+FinalSignal:ShortLong;

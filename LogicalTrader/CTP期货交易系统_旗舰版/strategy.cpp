@@ -15,15 +15,21 @@ TThostFtdcVolumeType m_VolumeTarget = 1;
 int m_OrderVolumeMultiple = 2;
 int m_IndexFuturePositionLimit = 20;
 string m_StrategyType = "";
+int m_TradedVolume = 0;
+double m_ReadLegOneAskPrice1 = 0.0;
+double m_ReadLegOneBidPrice1 = 0.0;
+int m_OnTickCount = 0;
+
 //难易程度:   buy  1,-1,0 的含义是:  在AskPrice1下调一个跳价
 //           sell 1,-1,0 的含义是:  在BidPrice1上调一个跳价
 //           sell -1,1,0 的含义是:  在AskPrice1下调一个跳价
 //           buy  -1,1,0 的含义是:  在BidPrice1上调一个跳价
 //           最后一个数字表明多少秒重新挂，0就是每个Tick都检查，大于零的数字就是过多少秒重新挂，小于0应该是错误
 vector<int> orderType = {0, 0, 0};
+int n = 0;
 
 void Strategy::OnTickData(CThostFtdcDepthMarketDataField *pDepthMarketData)
-{	
+{
 	if (m_StrategyType == "Quote")
 	{
 		DataInsertToKDB(pDepthMarketData);
@@ -48,13 +54,21 @@ void Strategy::OnTickData(CThostFtdcDepthMarketDataField *pDepthMarketData)
 			//SaveDataTxtCsv(pDepthMarketData);
 
 			//撤单追单,撤单成功后再追单
-			TDSpi_stgy->MaintainOrder(pDepthMarketData->UpdateTime, pDepthMarketData->LastPrice);
+			m_TradedVolume = 0;
+			TDSpi_stgy->MaintainOrder(pDepthMarketData->UpdateTime, pDepthMarketData->LastPrice, "CheckOnTick", &m_TradedVolume);
 
 			//开仓平仓（策略主逻辑的计算）
 			StrategyCalculate(pDepthMarketData);
 
 		}
 	}
+
+	/*if (n == 0)
+	{
+		n++;
+		TDSpi_stgy->Testkkk("CLOSE_TODAY_YD_OPEN", { -1, -5, 0 });
+		TDSpi_stgy->ReqOrderInsert("sn1809", '1', "3", 146000, 1);
+	}*/
 	
 }
 
@@ -63,6 +77,7 @@ void Strategy::OnTickData(CThostFtdcDepthMarketDataField *pDepthMarketData)
 //设置交易的合约代码
 void Strategy::Init(string strategyType, string instId, int kdbPort, string kdbScrpit, int strategyVolumeTarget, string strategykdbscript, double par1, double par2, double par3, double par4, double par5, double par6, int strategyOrderType1, int strategyOrderType2, int strategyOrderType3, string strategyPairLeg1Symbol, string strategyPairLeg2Symbol, string strategyPairLeg3Symbol)
 {
+	
 	m_StrategyType = strategyType;
 	orderType[0] = strategyOrderType1;
 	orderType[1] = strategyOrderType2;
@@ -71,7 +86,7 @@ void Strategy::Init(string strategyType, string instId, int kdbPort, string kdbS
 	kdbConnector.connect("localhost", kdbPort);
 	m_kdbScript = strategykdbscript;
 	m_VolumeTarget = strategyVolumeTarget;
-	string kdb_par_string = "StandardDeviationTimes:" + to_string(par1) + ";" + "WindowFrameLength:" + to_string((int)par2) + ";" + "KindleLengthOnSecond:" + to_string((int)par3) + ";" + "PairLeg1Symbol:" + strategyPairLeg1Symbol + ";" + "PairLeg2Symbol:" + strategyPairLeg2Symbol + ";" + "PairLeg3Symbol:" + strategyPairLeg3Symbol + ";";
+	string kdb_par_string = "KindleLengthOnSecond:" + to_string((int)par1) + ";" + "WindowFrameLength:" + to_string((int)par2) + ";" + "StandardDeviationTimes:" + to_string(par3) + ";" + "PairLeg1Symbol:" + strategyPairLeg1Symbol + ";" + "PairLeg2Symbol:" + strategyPairLeg2Symbol + ";" + "PairLeg3Symbol:" + strategyPairLeg3Symbol + ";";
 	string kdb_init_string = "h:hopen `::5000;PairFormula:{(x%y)};f:{x%y};bollingerBands: {[k;n;data]      movingAvg: mavg[n;data];    md: sqrt mavg[n;data*data]-movingAvg*movingAvg;      movingAvg+/:(k*-1 0 1)*\\:md};ReceiveTimeToDate:{(\"\"z\"\" $ 1970.01.01+ floor x %86400000000 )+ 08:00:00.000 +\"\"j\"\"$ 0.001* x mod  86400000000};isTable:{if[98h=type x;:1b];if[99h=type x;:98h=type key x];0b};isTable2: {@[{isTable value x}; x; 0b]}; ";
 	kdbConnector.sync(kdb_init_string.c_str());
 	kdbConnector.sync(kdb_par_string.c_str());
@@ -99,7 +114,6 @@ void Strategy::Init(string strategyType, string instId, int kdbPort, string kdbS
 
 
 
-//策略主逻辑的计算，70条行情里涨了0.6元，则做多，下跌则做空
 void Strategy::StrategyCalculate(CThostFtdcDepthMarketDataField *pDepthMarketData)
 {
 	TThostFtdcInstrumentIDType    instId;//合约,合约代码在结构体里已经有了
@@ -116,12 +130,20 @@ void Strategy::StrategyCalculate(CThostFtdcDepthMarketDataField *pDepthMarketDat
 	kdbConnector.sync(m_kdbScript.c_str());
 	kdb::Result res = kdbConnector.sync("exec count Signal from ShortLong");
 	m_ReadShortLongInitNum = res.res_->j;
+	if (m_ReadShortLongInitNum > 0)
+	{
+		res = kdbConnector.sync("exec last LegOneAskPrice1 from ShortLong");
+		m_ReadLegOneAskPrice1 = res.res_->f;
+		res = kdbConnector.sync("exec last LegOneBidPrice1 from ShortLong");
+		m_ReadLegOneBidPrice1 = res.res_->f;
+	}
 
 	if (m_ReadShortLongInitNum > m_ShortLongInitNum)
 	{
 		m_ShortLongInitNum = m_ReadShortLongInitNum;
 		kdb::Result res = kdbConnector.sync("exec last Signal from ShortLong");
 		m_ReadShortLongSignal = res.res_->j;
+
 
 		if (m_ReadShortLongInitNum == 1)
 		{
@@ -137,7 +159,12 @@ void Strategy::StrategyCalculate(CThostFtdcDepthMarketDataField *pDepthMarketDat
 			dir = '0';
 			price = pDepthMarketData->AskPrice1;
 			vol = m_VolumeTarget * m_OrderVolumeMultiple;
-			TDSpi_stgy->SendOrderDecoration(instId, order_type, dir, &kpp, price, vol, orderType, pDepthMarketData);
+			TDSpi_stgy->MaintainOrder(pDepthMarketData->UpdateTime, pDepthMarketData->LastPrice, "CancelOppositeOrder", &m_TradedVolume);
+			if (vol - m_TradedVolume > 0)
+			{
+				TDSpi_stgy->SendOrderDecoration(instId, order_type, dir, &kpp, m_ReadLegOneAskPrice1, m_ReadLegOneBidPrice1, price, vol - m_TradedVolume, orderType, pDepthMarketData);
+
+			}
 
 		}
 		else if (m_ReadShortLongSignal < 0)
@@ -145,9 +172,14 @@ void Strategy::StrategyCalculate(CThostFtdcDepthMarketDataField *pDepthMarketDat
 			dir = '1';
 			price = pDepthMarketData->BidPrice1;
 			vol = m_VolumeTarget * m_OrderVolumeMultiple;
-			TDSpi_stgy->SendOrderDecoration(instId, order_type, dir, &kpp, price, vol, orderType, pDepthMarketData);
-
+			TDSpi_stgy->MaintainOrder(pDepthMarketData->UpdateTime, pDepthMarketData->LastPrice, "CancelOppositeOrder", &m_TradedVolume);
+			if (vol - m_TradedVolume > 0)
+			{
+				TDSpi_stgy->SendOrderDecoration(instId, order_type, dir, &kpp, m_ReadLegOneAskPrice1, m_ReadLegOneBidPrice1, price, vol - m_TradedVolume, orderType, pDepthMarketData);
+			}
+			
 		}
+		m_TradedVolume = 0;
 	}
 
 }
@@ -227,27 +259,33 @@ void Strategy::SaveDataTxtCsv(CThostFtdcDepthMarketDataField *pDepthMarketData)
 //保存数据到vector
 void Strategy::SaveDataVec(CThostFtdcDepthMarketDataField *pDepthMarketData)
 {
-	string date = pDepthMarketData->TradingDay;
-	string time = pDepthMarketData->UpdateTime;
-	double buy1price = pDepthMarketData->BidPrice1;
-	int buy1vol = pDepthMarketData->BidVolume1;
-	double new1 = pDepthMarketData->LastPrice;
-	double sell1price = pDepthMarketData->AskPrice1;
-	int sell1vol = pDepthMarketData->AskVolume1;
-	double vol = pDepthMarketData->Volume;
-	double openinterest = pDepthMarketData->OpenInterest;//持仓量
+	m_OnTickCount++;
+	if (m_OnTickCount > 120)
+	{
+		m_OnTickCount = 0;
+		string date = pDepthMarketData->TradingDay;
+		string time = pDepthMarketData->UpdateTime;
+		double buy1price = pDepthMarketData->BidPrice1;
+		int buy1vol = pDepthMarketData->BidVolume1;
+		double new1 = pDepthMarketData->LastPrice;
+		double sell1price = pDepthMarketData->AskPrice1;
+		int sell1vol = pDepthMarketData->AskVolume1;
+		double vol = pDepthMarketData->Volume;
+		double openinterest = pDepthMarketData->OpenInterest;//持仓量
 
 
-	futureData.date = date;
-	futureData.time = time;
-	futureData.buy1price = buy1price;
-	futureData.buy1vol = buy1vol;
-	futureData.new1 = new1;
-	futureData.sell1price = sell1price;
-	futureData.sell1vol = sell1vol;
-	futureData.vol = vol;
-	futureData.openinterest = openinterest;
-	m_futureData_vec.push_back(futureData);	
+		futureData.date = date;
+		futureData.time = time;
+		futureData.buy1price = buy1price;
+		futureData.buy1vol = buy1vol;
+		futureData.new1 = new1;
+		futureData.sell1price = sell1price;
+		futureData.sell1vol = sell1vol;
+		futureData.vol = vol;
+		futureData.openinterest = openinterest;
+		m_futureData_vec.push_back(futureData);
+	}
+	
 
 }
 

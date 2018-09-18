@@ -81,10 +81,14 @@ public:
 	void CtpTraderSpi::Set_CThostFtdcDepthMarketDataField(CThostFtdcDepthMarketDataField *pDepthMarketData);
 
 	///判断订单类型
-	virtual void SendOrderDecoration(TThostFtdcInstrumentIDType    instId, string order_type, TThostFtdcDirectionType dir, TThostFtdcCombOffsetFlagType * kpp, TThostFtdcPriceType price, TThostFtdcVolumeType vol, vector<int> orderType, CThostFtdcDepthMarketDataField *pDepthMarketData);
+	virtual void SendOrderDecoration(TThostFtdcInstrumentIDType    instId, string order_type, TThostFtdcDirectionType dir, TThostFtdcCombOffsetFlagType * kpp, TThostFtdcPriceType askprice, TThostFtdcPriceType bidprice, TThostFtdcPriceType price, TThostFtdcVolumeType vol, vector<int> orderType, CThostFtdcDepthMarketDataField *pDepthMarketData);
 
 	//判断下单类型
-	virtual void CheckOrderPosition(TThostFtdcInstrumentIDType instId, TThostFtdcDirectionType dir, TThostFtdcPriceType *price, vector<int> orderType, CThostFtdcDepthMarketDataField *pDepthMarketData);
+	virtual void CheckOrderPosition(TThostFtdcInstrumentIDType instId, TThostFtdcDirectionType dir, TThostFtdcPriceType askprice, TThostFtdcPriceType bidprice, TThostFtdcPriceType *price, vector<int> orderType, CThostFtdcDepthMarketDataField *pDepthMarketData);
+
+	//实验用Function
+	virtual void Testkkk(string order_type, vector<int> orderType);
+
 public:
 	///用户登录请求
 	void ReqUserLogin(TThostFtdcBrokerIDType	appId,
@@ -138,7 +142,7 @@ public:
 	void setAccount(TThostFtdcBrokerIDType	appId,	TThostFtdcUserIDType	userId,	TThostFtdcPasswordType	passwd);
 
 	//撤单，如需追单，可在报单回报里面等撤单成功后再进行
-	void MaintainOrder(const string& MDtime, double MDprice);
+	void MaintainOrder(const string& MDtime, double MDprice, string maintainMode, int *tradedVolume);
 
 	//设置交易的合约代码
 	void setInstId(string instId);
@@ -191,7 +195,7 @@ public:
 	//返回品种开平规则
 	string Send_TThostFtdcCombOffsetFlagType(string instID);
 
-
+	
 	
 private:
 	
@@ -225,6 +229,11 @@ private:
 	map<string, CThostFtdcOrderField*> m_CThostFtdcInputOrder_type;
 
 	map<string, CThostFtdcDepthMarketDataField*> m_pDepthMarketData_type;//把和策略相关的行情存储进入到map中，防止其他策略的订阅行情干扰
+
+	//map<int, int> m_requestID_orderRef;//把柜台处理的requestID和订单相关的OrderRef关联起来
+	
+	
+	map<int, CThostFtdcInputOrderField> m_orderRef_orderreq;//CThostFtdcInputOrderField
 
 	TThostFtdcInstrumentIDType m_instId;//合约代码
 	

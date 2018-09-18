@@ -50,8 +50,8 @@ DWORD WINAPI ThreadProc(LPVOID lpParameter);
 int main(int argc, const char* argv[])
 {
 	
-	string strategyAccountParampath = argv[1];
-	//string strategyAccountParampath = "AccountParam.ini";
+	//string strategyAccountParampath = argv[1];
+	string strategyAccountParampath = "9010_AccountParam_SHE_SIM_al_5_300_2.ini";
 	g_hEvent=CreateEvent(NULL, true, false, NULL); 
 
 	//--------------读取配置文件，获取账户信息、服务器地址、交易的合约代码--------------
@@ -59,7 +59,7 @@ int main(int argc, const char* argv[])
 	memset(&readMessage, 0, sizeof(readMessage));
 	SetMessage(readMessage, &kdbPort, &strategyVolumeTarget, &strategykdbscript, &par1, &par2, &par3, &par4, &par5, &par6, &strategyOrderType1, &strategyOrderType2, &strategyOrderType3, strategyAccountParampath, &strategyPairLeg1Symbol, &strategyPairLeg2Symbol, &strategyPairLeg3Symbol);	
 
-	SetConsoleTitle(("CTP" + to_string(kdbPort)).c_str());
+	SetConsoleTitle(("CTP" + (strategyAccountParampath)).c_str());
 
 	
 	
@@ -117,8 +117,10 @@ int main(int argc, const char* argv[])
 	}
 	else
 	{
+		timer_start(kdbSetShortLong, 60000);
 		pUserApi_md->Join();//等待接口线程退出
 		pUserApi_trade->Join();
+		while (true);
 	}
 	
 }

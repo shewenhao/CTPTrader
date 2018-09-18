@@ -62,6 +62,8 @@ struct ReadMessage
 };
 
 kdb::Connector kdbConnectorSetGet;
+string kdbShortLongSetPath;
+string kdbShortSetPath;
 string kdbDataSetPath;
 string kdbDataGetPath;
 string specificFolderPath = "/KDB_Scripts/";
@@ -102,6 +104,11 @@ void kdbSetData()
 	kdbConnectorSetGet.sync("Quote:-500000#select from Quote;");
 	kdbConnectorSetGet.sync("delete from `Quote where Date.minute > 02:30:00, Date.minute <= 09:00:00;delete from `Quote where Date.minute > 11:30:00, Date.minute < 13:00:00;delete from `Quote where Date.minute > 15:15:00, Date.minute < 21:00:00;");
 	kdbConnectorSetGet.sync(kdbDataSetPath.c_str());
+}
+
+void kdbSetShortLong()
+{
+	kdbConnectorSetGet.sync(kdbShortLongSetPath.c_str());
 }
 
 void kdbGetData()
@@ -148,6 +155,7 @@ void SetMessage(ReadMessage& readMessage, int *kdbPort, int *strategyVolumeTarge
 	kdbScriptExePath = "\\l " + kdbDataSetPath + specificFolderPath;
 	kdbDataGetPath = "Quote: get `:" + kdbDataSetPath + "/Quote;";
 	kdbDataSetPath = "`:" + kdbDataSetPath + "/Quote set Quote;";
+	kdbShortLongSetPath = replaceAll(kdbDataSetPath, "Quote", "ShortLong");
 	//kdbGetData();
 
 	//-------------------------------¶ÁÈ¡ÕËºÅÄ£¿é-------------------------------
@@ -163,8 +171,6 @@ void SetMessage(ReadMessage& readMessage, int *kdbPort, int *strategyVolumeTarge
 	strcpy_s(readMessage.m_appId, read_brokerID);
 	strcpy_s(readMessage.m_userId, read_userId);
 	strcpy_s(readMessage.m_passwd, read_passwd);
-
-
 
 	//-------------------------------¶ÁÈ¡µØÖ·Ä£¿é-------------------------------
 	CString read_MDAddress;

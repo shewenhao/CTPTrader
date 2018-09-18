@@ -64,7 +64,7 @@ update GDPperCapita%20 from ([] Continent:`NorthAmerica`Asia`Asia`Europe`Europe`
 / single pie
 ([] Country:`US`China`japan`Germany`UK`Zimbabwe`Bangladesh`Nigeria`Vietnam; 
 	 GDP:15080.0 11300.0 4444.0 3114.0 2228.0 9.9 113.0 196.0 104.0 )
-
+Quote
 / Many Pies
 ([] Continent:`NorthAmerica`Asia`Asia`Europe`Europe`Africa`Asia`Africa`Asia;
 	 Country:`US`China`japan`Germany`UK`Zimbabwe`Bangladesh`Nigeria`Vietnam; 
@@ -306,3 +306,11 @@ TrailShortLong:-1#select from QuoteDataKindle;update Signal:0 from `TrailShortLo
 
 ShortLong: get `:c:/q/ShortLong
 TrailShortLong:-1#select from ShortLong;update Signal:-1 from `TrailShortLong;ShortLong: ShortLong, TrailShortLong;
+
+-10#select from Quote
+
+"`Quote insert (2018.07.24D15:16:52;2018.07.24D16:27:22.921;`sn1809;144290.000000;1;144380.000000;1)"
+
+
+
+PairFormulaDValue:{[x;mx;y;my] (x*mx) - (y*my)

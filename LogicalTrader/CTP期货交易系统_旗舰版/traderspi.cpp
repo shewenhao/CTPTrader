@@ -518,6 +518,7 @@ void CtpTraderSpi::ReqOrderInsert(TThostFtdcInstrumentIDType instId,
 	TThostFtdcPriceType price,   TThostFtdcVolumeType vol)
 {
 	CThostFtdcInputOrderField req;
+	string sentFailedStrOrderRef = orderRef;
 	memset(&req, 0, sizeof(req));	
 	strcpy(req.BrokerID, m_appId);  //应用单元代码	
 	strcpy(req.InvestorID, m_userId); //投资者代码	
@@ -559,11 +560,13 @@ void CtpTraderSpi::ReqOrderInsert(TThostFtdcInstrumentIDType instId,
 	int ret = m_pUserApi_td->ReqOrderInsert(&req, ++requestId);
 
 
+	m_orderRef_orderreq.insert(std::pair<int, CThostFtdcInputOrderField>(nextOrderRef - 1 , req));
+
+
 	cerr<<" 请求 | 发送报单..."<<((ret == 0)?"成功":"失败")<< endl;
+	cerr << " ReqOrderInsert函数内部:" << "instId:" << instId << " dir:" << dir << " kpp:" << kpp << " price:" << price << " vol:" << vol << endl;
 
-	cerr<<" ReqOrderInsert函数内部:"<<"instId:"<<instId<<" dir:"<<dir<<" kpp:"<<kpp<<" price:"<<price<<" vol:"<<vol<<endl;
-
-
+	
 }
 
 void CtpTraderSpi::OnRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, 
@@ -571,6 +574,26 @@ void CtpTraderSpi::OnRspOrderInsert(CThostFtdcInputOrderField *pInputOrder,
 {
 	if( !IsErrorRspInfo(pRspInfo) && pInputOrder ){
 		cerr<<"响应 | 报单提交成功...报单引用:"<<pInputOrder->OrderRef<<endl; 
+	}
+	else
+	{
+		if (pRspInfo->ErrorID == 30 || pRspInfo->ErrorID == 50 || pRspInfo->ErrorID == 51)
+		{
+			int errorOrderRef = atoi(pInputOrder->OrderRef);
+			int nextOrderRef = atoi(orderRef);
+
+			m_frontsessionref_ordertype.insert(std::pair<string, vector<int>>(to_string(frontId) + to_string(sessionId) + to_string(nextOrderRef), m_frontsessionref_ordertype[to_string(frontId) + to_string(sessionId) + to_string(errorOrderRef)]));
+			m_frontsessionref_order_type.insert(std::pair<string, string>(to_string(frontId) + to_string(sessionId) + to_string(nextOrderRef),"ALL_OPEN"));
+
+			TThostFtdcCombOffsetFlagType openkpp = "0";
+			(m_orderRef_orderreq[errorOrderRef]).CombOffsetFlag[0] = MapOffset(openkpp[0], ++requestId);
+
+			/*ReqOrderInsert((m_orderRef_orderreq[errorOrderRef]).InstrumentID, (m_orderRef_orderreq[errorOrderRef]).Direction, (m_orderRef_orderreq[errorOrderRef]).CombOffsetFlag, (m_orderRef_orderreq[errorOrderRef]).LimitPrice, (m_orderRef_orderreq[errorOrderRef]).VolumeTotalOriginal);*/
+
+
+			SendOrderDecoration((m_orderRef_orderreq[errorOrderRef]).InstrumentID, "ALL_OPEN", (m_orderRef_orderreq[errorOrderRef]).Direction, &(m_orderRef_orderreq[errorOrderRef]).CombOffsetFlag, pDepthMarketDataTD->AskPrice1, pDepthMarketDataTD->BidPrice1, (m_orderRef_orderreq[errorOrderRef]).LimitPrice, (m_orderRef_orderreq[errorOrderRef]).VolumeTotalOriginal, m_frontsessionref_ordertype[to_string(frontId) + to_string(sessionId) + to_string(errorOrderRef)], pDepthMarketDataTD);
+
+		}
 	}
 
 	if(bIsLast) SetEvent(g_hEvent);	
@@ -689,11 +712,10 @@ void CtpTraderSpi::OnRtnOrder(CThostFtdcOrderField *pOrder)
 				{
 
 				}
-				else
+				else if (m_frontsessionref_ordertype[to_string(frontId) + to_string(sessionId) + strOrderRef][2] < 86400)
 				{
-					SendOrderDecoration(instId, Send_TThostFtdcCombOffsetFlagType(instIdStr.substr(0, 2)), dir, &kpp, price, vol, m_frontsessionref_ordertype[to_string(frontId) + to_string(sessionId) + strOrderRef], pDepthMarketDataTD);
+					SendOrderDecoration(instId, m_frontsessionref_order_type[to_string(frontId) + to_string(sessionId) + strOrderRef], dir, &kpp, pDepthMarketDataTD->AskPrice1, pDepthMarketDataTD->BidPrice1,  price, vol, m_frontsessionref_ordertype[to_string(frontId) + to_string(sessionId) + strOrderRef], pDepthMarketDataTD);
 					m_frontsessionref_frontsessionref.insert(pair<string, CThostFtdcOrderField*>(to_string(frontId) + to_string(sessionId) + strOrderRef, pOrder));
-
 				}
 
 			}
@@ -972,7 +994,9 @@ void CtpTraderSpi::OnHeartBeatWarning(int nTimeLapse)
 
 void CtpTraderSpi::OnRspError(CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
+	cerr << " 请求 |error" << endl;
 	IsErrorRspInfo(pRspInfo);
+	
 }
 
 
@@ -980,8 +1004,9 @@ bool CtpTraderSpi::IsErrorRspInfo(CThostFtdcRspInfoField *pRspInfo)
 {
 	// 如果ErrorID != 0, 说明收到了错误的响应
 	bool ret = ((pRspInfo) && (pRspInfo->ErrorID != 0));
-	if (ret){
-		cerr<<" 响应 | "<<pRspInfo->ErrorMsg<<endl;
+	if (ret)
+	{
+		cerr << " 响应 | " << pRspInfo->ErrorMsg << endl;
 	}
 	return ret;
 }
@@ -1136,7 +1161,7 @@ void CtpTraderSpi::setAccount(TThostFtdcBrokerIDType	appId,	TThostFtdcUserIDType
 
 
 //撤单，如需追单，可在报单回报里面等撤单成功后再进行
-void CtpTraderSpi::MaintainOrder(const string& MDtime, double MDprice)
+void CtpTraderSpi::MaintainOrder(const string& MDtime, double MDprice, string maintainMode, int *tradedVolume)
 {
 	string InsertTime_str;
 	double TargetPrice;
@@ -1148,43 +1173,77 @@ void CtpTraderSpi::MaintainOrder(const string& MDtime, double MDprice)
 		cerr<<"orderList.size():"<<orderList.size()<<endl;
 	}
 
-	for (vector<CThostFtdcOrderField*>::iterator iter = orderList.begin(); iter != orderList.end(); iter++)//倒序遍历，break
+	if (maintainMode == "CheckOnTick")
 	{
-		if ((*iter)->OrderStatus == '3' || (*iter)->OrderStatus == '1')//未成交还在队列中,部分成交还在队列中
+		for (vector<CThostFtdcOrderField*>::iterator iter = orderList.begin(); iter != orderList.end(); iter++)//倒序遍历，break
 		{
-			if ((*iter)->FrontID == frontId && (*iter)->SessionID == sessionId)
+			if ((*iter)->OrderStatus == '3' || (*iter)->OrderStatus == '1')//未成交还在队列中,部分成交还在队列中
 			{
-				string strOrderRef = (*iter)->OrderRef;
-				SetPrice = (*iter)->LimitPrice;
-				if (m_frontsessionref_frontsessionref.find(to_string(frontId) + to_string(sessionId) + strOrderRef) == m_frontsessionref_frontsessionref.end())
+				if ((*iter)->FrontID == frontId && (*iter)->SessionID == sessionId)
 				{
-					if (m_frontsessionref_ordertype.find(to_string(frontId) + to_string(sessionId) + strOrderRef) == m_frontsessionref_ordertype.end())
+					string strOrderRef = (*iter)->OrderRef;
+					SetPrice = (*iter)->LimitPrice;
+					if (m_frontsessionref_frontsessionref.find(to_string(frontId) + to_string(sessionId) + strOrderRef) == m_frontsessionref_frontsessionref.end())
 					{
-
-					}
-					else
-					{
-						CheckOrderPosition((*iter)->InstrumentID, (*iter)->Direction, &TargetPrice, m_frontsessionref_ordertype[to_string(frontId) + to_string(sessionId) + strOrderRef], pDepthMarketDataTD);
-						InsertTime_str = (*iter)->InsertTime;//委托时间"21:47:01"
-
-						MDtime_last2 = atoi(MDtime.substr(6, 2).c_str());
-
-						if (MDtime_last2 < atoi(InsertTime_str.substr(6, 2).c_str()))//行情时间最后两位小于委托时间的最后两位
-							MDtime_last2 += 60;//行情时间加60秒
-
-						int OrderAdjustMode = m_frontsessionref_ordertype[to_string(frontId) + to_string(sessionId) + strOrderRef][2];
-						if (MDtime_last2 - atoi(InsertTime_str.substr(6, 2).c_str()) >= OrderAdjustMode && SetPrice != TargetPrice)//委托大于该订单规定的秒数未成交
+						if (m_frontsessionref_ordertype.find(to_string(frontId) + to_string(sessionId) + strOrderRef) == m_frontsessionref_ordertype.end())
 						{
-							cerr << "撤单:" << endl;
-							//撤单
-							ReqOrderAction((*iter)->BrokerOrderSeq);
 
+						}
+						else
+						{
+							CheckOrderPosition((*iter)->InstrumentID, (*iter)->Direction, pDepthMarketDataTD->AskPrice1, pDepthMarketDataTD->BidPrice1, &TargetPrice, m_frontsessionref_ordertype[to_string(frontId) + to_string(sessionId) + strOrderRef], pDepthMarketDataTD);
+							InsertTime_str = (*iter)->InsertTime;//委托时间"21:47:01"
+
+							MDtime_last2 = atoi(MDtime.substr(6, 2).c_str());
+
+							if (MDtime_last2 < atoi(InsertTime_str.substr(6, 2).c_str()))//行情时间最后两位小于委托时间的最后两位
+								MDtime_last2 += 60;//行情时间加60秒
+
+							int OrderAdjustMode = m_frontsessionref_ordertype[to_string(frontId) + to_string(sessionId) + strOrderRef][2];
+							if (MDtime_last2 - atoi(InsertTime_str.substr(6, 2).c_str()) >= OrderAdjustMode && SetPrice != TargetPrice)//委托大于该订单规定的秒数未成交
+							{
+								cerr << "撤单:" << endl;
+								//撤单
+								ReqOrderAction((*iter)->BrokerOrderSeq);
+
+							}
 						}
 					}
 				}
 			}
-		}				
+		}
 	}
+	else if (maintainMode == "CancelOppositeOrder")
+	{
+		for (vector<CThostFtdcOrderField*>::iterator iter = orderList.begin(); iter != orderList.end(); iter++)//倒序遍历，break
+		{
+			if ((*iter)->OrderStatus == '3' || (*iter)->OrderStatus == '1')//未成交还在队列中,部分成交还在队列中
+			{
+				if ((*iter)->FrontID == frontId && (*iter)->SessionID == sessionId)
+				{
+					string strOrderRef = (*iter)->OrderRef;
+					SetPrice = (*iter)->LimitPrice;
+					if (m_frontsessionref_frontsessionref.find(to_string(frontId) + to_string(sessionId) + strOrderRef) == m_frontsessionref_frontsessionref.end())
+					{
+						if (m_frontsessionref_ordertype.find(to_string(frontId) + to_string(sessionId) + strOrderRef) == m_frontsessionref_ordertype.end())
+						{
+
+						}
+						else
+						{
+							*tradedVolume = (*iter)->VolumeTotal;
+							ReqOrderAction((*iter)->BrokerOrderSeq);
+						}
+					}
+				}
+			}
+		}
+	}
+	
+
+
+
+
 }
 
 
@@ -1857,12 +1916,12 @@ void CtpTraderSpi::Set_CThostFtdcDepthMarketDataField(CThostFtdcDepthMarketDataF
 	/*m_pDepthMarketData_type.insert(std::pair<string, CThostFtdcDepthMarketDataField*>(to_string(frontId) + to_string(sessionId), pDepthMarketData));*/
 }
 
-void CtpTraderSpi::SendOrderDecoration(TThostFtdcInstrumentIDType instId, string order_type, TThostFtdcDirectionType dir, TThostFtdcCombOffsetFlagType * kpp, TThostFtdcPriceType price, TThostFtdcVolumeType vol, vector<int> orderType, CThostFtdcDepthMarketDataField *pDepthMarketData)
+void CtpTraderSpi::SendOrderDecoration(TThostFtdcInstrumentIDType instId, string order_type, TThostFtdcDirectionType dir, TThostFtdcCombOffsetFlagType * kpp, TThostFtdcPriceType askprice, TThostFtdcPriceType bidprice, TThostFtdcPriceType price, TThostFtdcVolumeType vol, vector<int> orderType, CThostFtdcDepthMarketDataField *pDepthMarketData)
 {
 	string strOrderRef = orderRef;
 	m_frontsessionref_ordertype.insert (std::pair<string, vector<int>>(to_string(frontId) + to_string(sessionId) + strOrderRef, orderType));
 	m_frontsessionref_order_type.insert(std::pair<string, string>(to_string(frontId) + to_string(sessionId) + strOrderRef, order_type));
-	CheckOrderPosition(instId, dir, &price, orderType, pDepthMarketData);
+	CheckOrderPosition(instId, dir, askprice, bidprice, &price, orderType, pDepthMarketData);
 
 	#pragma region CLOSE_TODAY_YD_OPEN
 		if (order_type == "CLOSE_TODAY_YD_OPEN")
@@ -1911,7 +1970,7 @@ void CtpTraderSpi::SendOrderDecoration(TThostFtdcInstrumentIDType instId, string
 				}
 				else if (this->SendTodayHolding_short(instId) == 0 && IndexFuturePositionLimit - this->SendTodayHolding_short(instId) - this->SendTodayHolding_long(instId) >= vol)
 				{
-					this->ReqOrderInsert(instId, dir, "0", price, vol);
+					this->ReqOrderInsert(instId, dir, "1", price, vol);
 				}
 				else if (this->SendTodayHolding_short(instId) == 0 && this->SendYdHolding_short(instId) >= vol)
 				{
@@ -1926,7 +1985,7 @@ void CtpTraderSpi::SendOrderDecoration(TThostFtdcInstrumentIDType instId, string
 				}
 				else if (this->SendTodayHolding_long(instId) == 0 && IndexFuturePositionLimit - this->SendTodayHolding_short(instId) - this->SendTodayHolding_long(instId) >= vol)
 				{
-					this->ReqOrderInsert(instId, dir, "0", price, vol);
+					this->ReqOrderInsert(instId, dir, "1", price, vol);
 				}
 				else if (this->SendTodayHolding_long(instId) == 0 && this->SendYdHolding_long(instId) >= vol)
 				{
@@ -1935,37 +1994,82 @@ void CtpTraderSpi::SendOrderDecoration(TThostFtdcInstrumentIDType instId, string
 			}
 		}
 	#pragma endregion CLOSE_TODAY_YD_OPEN
+
+	#pragma region ALL_OPEN
+			if (order_type == "ALL_OPEN")
+			{
+				if (dir == '0')
+				{
+					if (this->SendTodayHolding_short(instId) > 0 && IndexFuturePositionLimit - this->SendTodayHolding_short(instId) - this->SendTodayHolding_long(instId) >= vol)
+					{
+						this->ReqOrderInsert(instId, dir, "0", price, vol);
+					}
+					else if (this->SendTodayHolding_short(instId) == 0 && IndexFuturePositionLimit - this->SendTodayHolding_short(instId) - this->SendTodayHolding_long(instId) >= vol)
+					{
+						this->ReqOrderInsert(instId, dir, "0", price, vol);
+					}
+					else if (this->SendTodayHolding_short(instId) == 0 && this->SendYdHolding_short(instId) >= vol)
+					{
+						this->ReqOrderInsert(instId, dir, "0", price, vol);
+					}
+				}
+				else if (dir == '1')
+				{
+					if (this->SendTodayHolding_long(instId) > 0 && IndexFuturePositionLimit - this->SendTodayHolding_short(instId) - this->SendTodayHolding_long(instId) >= vol)
+					{
+						this->ReqOrderInsert(instId, dir, "0", price, vol);
+					}
+					else if (this->SendTodayHolding_long(instId) == 0 && IndexFuturePositionLimit - this->SendTodayHolding_short(instId) - this->SendTodayHolding_long(instId) >= vol)
+					{
+						this->ReqOrderInsert(instId, dir, "0", price, vol);
+					}
+					else if (this->SendTodayHolding_long(instId) == 0 && this->SendYdHolding_long(instId) >= vol)
+					{
+						this->ReqOrderInsert(instId, dir, "0", price, vol);
+					}
+				}
+			}
+	#pragma endregion ALL_OPEN
+
+		
 }
-void CtpTraderSpi::CheckOrderPosition(TThostFtdcInstrumentIDType instId, TThostFtdcDirectionType dir, TThostFtdcPriceType *price, vector<int> orderType, CThostFtdcDepthMarketDataField *pDepthMarketData)
+void CtpTraderSpi::CheckOrderPosition(TThostFtdcInstrumentIDType instId, TThostFtdcDirectionType dir, TThostFtdcPriceType askprice, TThostFtdcPriceType bidprice, TThostFtdcPriceType *price, vector<int> orderType, CThostFtdcDepthMarketDataField *pDepthMarketData)
 {
 	int OrderHitPutMode = orderType[0];
 	int OrderPriceMover = orderType[1];
 	int OrderAdjustMode = orderType[2];
 	double OrderPriceTick = m_instMessage_map[instId]->VolumeMultiple;
 	double SettlePrice = 0.0;
-	
+
 
 	if (dir == '0')
 	{
 		if (OrderHitPutMode == 1)
 		{
-			SettlePrice = pDepthMarketData->AskPrice1 + OrderPriceMover * m_instMessage_map[instId]->PriceTick;
+			SettlePrice = askprice + OrderPriceMover * m_instMessage_map[instId]->PriceTick;
 		}
 		else if (OrderHitPutMode == -1)
 		{
-			SettlePrice = pDepthMarketData->BidPrice1 + OrderPriceMover * m_instMessage_map[instId]->PriceTick;
+			SettlePrice = bidprice + OrderPriceMover * m_instMessage_map[instId]->PriceTick;
 		}
 	}
 	else if (dir == '1')
 	{
 		if (OrderHitPutMode == 1)
 		{
-			SettlePrice = pDepthMarketData->BidPrice1 - OrderPriceMover * m_instMessage_map[instId]->PriceTick;
+			SettlePrice = bidprice - OrderPriceMover * m_instMessage_map[instId]->PriceTick;
 		}
 		else if (OrderHitPutMode == -1)
 		{
-			SettlePrice = pDepthMarketData->AskPrice1 - OrderPriceMover * m_instMessage_map[instId]->PriceTick;
+			SettlePrice = askprice - OrderPriceMover * m_instMessage_map[instId]->PriceTick;
 		}
 	}
 	*price = SettlePrice;
+}
+
+void CtpTraderSpi::Testkkk(string order_type, vector<int> orderType)
+{
+	string strOrderRef = orderRef;
+	m_frontsessionref_ordertype.insert(std::pair<string, vector<int>>(to_string(frontId) + to_string(sessionId) + strOrderRef, orderType));
+	m_frontsessionref_order_type.insert(std::pair<string, string>(to_string(frontId) + to_string(sessionId) + strOrderRef, order_type));
 }
