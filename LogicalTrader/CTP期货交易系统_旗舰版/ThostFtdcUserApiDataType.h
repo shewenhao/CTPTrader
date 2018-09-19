@@ -76,7 +76,7 @@ typedef char TThostFtdcClientIDType[11];
 ///TFtdcInstrumentIDType是一个合约代码类型
 /////////////////////////////////////////////////////////////////////////
 //typedef char TThostFtdcInstrumentIDType[31];
-typedef char TThostFtdcInstrumentIDType[300];
+typedef char TThostFtdcInstrumentIDType[31];
 
 /////////////////////////////////////////////////////////////////////////
 ///TFtdcMarketIDType是一个市场代码类型

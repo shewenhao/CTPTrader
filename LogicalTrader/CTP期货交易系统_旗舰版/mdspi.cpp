@@ -72,6 +72,7 @@ void CtpMdSpi::OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin,
 
 		SubscribeMarketData(m_instId);//订阅交易合约的行情
 
+		setInstIdList_holding_md(m_charNewIdList_holding_md_string);
 		//订阅持仓合约的行情
 		if(m_charNewIdList_holding_md)
 		{	
@@ -80,7 +81,7 @@ void CtpMdSpi::OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin,
 			cerr<<"有持仓，订阅行情："<<endl;
 			SubscribeMarketData(m_charNewIdList_holding_md);//流控为6笔/秒,如果没有持仓，就不要订阅
 
-			delete []m_charNewIdList_holding_md;//订阅完成，释放内存
+			//delete []m_charNewIdList_holding_md;//订阅完成，释放内存
 		}
 		else
 			cerr<<"当前没有持仓"<<endl;
@@ -192,6 +193,7 @@ void CtpMdSpi::setInstId(string instId)
 
 void CtpMdSpi::setInstIdList_holding_md(string instId)
 {
+	m_charNewIdList_holding_md_string = instId;
 	//strcpy(m_instIdList_holding_md, instId.c_str());
 	int sizeInstId = instId.size();
 

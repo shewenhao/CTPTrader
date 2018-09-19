@@ -50,8 +50,8 @@ DWORD WINAPI ThreadProc(LPVOID lpParameter);
 int main(int argc, const char* argv[])
 {
 	
-	//string strategyAccountParampath = argv[1];
-	string strategyAccountParampath = "9010_AccountParam_SHE_SIM_al_5_300_2.ini";
+	string strategyAccountParampath = argv[1];
+	//string strategyAccountParampath = "9010_AccountParam_CAI_HAIZHENG_al_5_300_2.ini";
 	g_hEvent=CreateEvent(NULL, true, false, NULL); 
 
 	//--------------读取配置文件，获取账户信息、服务器地址、交易的合约代码--------------

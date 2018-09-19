@@ -86,6 +86,7 @@ private:
 	char* m_charNewIdList_all;//全市场合约
 
 	char* m_charNewIdList_holding_md;//程序启动前的留仓，需要订阅行情的合约
+	string m_charNewIdList_holding_md_string;
 
 	TThostFtdcInstrumentIDType m_instId;//要订阅行情的合约代码，即策略要交易的合约
 	string m_instId_string;
