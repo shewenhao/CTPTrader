@@ -1,12 +1,42 @@
 #ifndef _STRUCTFUNCTION_H
 #define _STRUCTFUNCTION_H
 
+#include "ThostFtdcUserApiDataType.h"
 #include <string>
 #include <vector>
 #include <iostream>
 
 using namespace std;
 
+struct twap_message
+{
+	twap_message()
+	{
+	}
+	string instId;
+	string order_type;
+	char dir;
+	double askprice; 
+	double bidprice;
+	double price;
+	int vol;
+	int executedvol;
+	vector<int> orderType;	
+	//vector<int> splitvolumelist;
+	//vector<string> instIdList;
+};
+
+struct pMarketData_message
+{
+	pMarketData_message()
+	{
+	}
+	string instId;
+	double askprice1;
+	double bidprice1;
+	double price;
+	int vol;
+};
 
 //交易信息的结构体
 struct trade_message
@@ -18,10 +48,16 @@ struct trade_message
 		PreSettlementPrice = 0.0;
 		holding_long = 0;
 		holding_short = 0;
+
 		TodayPosition_long = 0;
 		YdPosition_long = 0;
 		TodayPosition_short = 0;
 		YdPosition_short = 0;
+
+		TodayPosition_longlocked = 0;
+		YdPosition_longlocked = 0;
+		TodayPosition_shortlocked = 0;
+		YdPosition_shortlocked = 0;
 
 		closeProfit_long = 0.0;
 		OpenProfit_long = 0.0;
@@ -42,6 +78,11 @@ struct trade_message
 	int TodayPosition_short;//空单今日持仓
 	int YdPosition_short;//空单上日持仓
 
+	int TodayPosition_longlocked;
+	int YdPosition_longlocked;//多单上日持仓
+
+	int TodayPosition_shortlocked;//空单今日持仓
+	int YdPosition_shortlocked;//空单上日持仓
 	double closeProfit_long;//多单平仓盈亏
 	double OpenProfit_long;//多单浮动盈亏
 
@@ -91,5 +132,7 @@ void ReadDatas(string fileName, vector<History_data> &history_data_vec);
 
 
 int Store_fileName(string path, vector<string> &FileName);
+
+string String_StripNum(string);
 
 #endif

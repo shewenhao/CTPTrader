@@ -78,7 +78,10 @@ public:
 	virtual void OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDetailField *pInvestorPositionDetail, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
 
 	//市场行情通知
-	void CtpTraderSpi::Set_CThostFtdcDepthMarketDataField(CThostFtdcDepthMarketDataField *pDepthMarketData);
+	virtual void CtpTraderSpi::Set_CThostFtdcDepthMarketDataField(CThostFtdcDepthMarketDataField *pDepthMarketData);
+
+	//twap准备
+	virtual void Twap_Prep(TThostFtdcInstrumentIDType    instId, string order_type, TThostFtdcDirectionType dir, TThostFtdcCombOffsetFlagType * kpp, TThostFtdcPriceType askprice, TThostFtdcPriceType bidprice, TThostFtdcPriceType price, TThostFtdcVolumeType vol, vector<int> orderType, CThostFtdcDepthMarketDataField *pDepthMarketData);
 
 	///判断订单类型
 	virtual void SendOrderDecoration(TThostFtdcInstrumentIDType    instId, string order_type, TThostFtdcDirectionType dir, TThostFtdcCombOffsetFlagType * kpp, TThostFtdcPriceType askprice, TThostFtdcPriceType bidprice, TThostFtdcPriceType price, TThostFtdcVolumeType vol, vector<int> orderType, CThostFtdcDepthMarketDataField *pDepthMarketData);
@@ -88,6 +91,15 @@ public:
 
 	//实验用Function
 	virtual void Testkkk(string order_type, vector<int> orderType);
+
+	//策略根据成交回报检查是否需要维护twap单腿订单
+	virtual void CtpTraderSpi::OnTwap_TradeMaintain_InstId(CThostFtdcTradeField *pTrade);
+
+	//策略根据订单回报检查是否需要维护twap单腿订单
+	virtual void CtpTraderSpi::OnTwap_OrderMaintain_InstId(CThostFtdcOrderField *pOrder);
+
+	//策略判断指定合约是否有orderlist排队或者twap_message_p里包含有相关合约未执行完毕的合约
+	virtual bool CtpTraderSpi::Check_OrderList_TwapMessage(string instId);
 
 public:
 	///用户登录请求
@@ -142,7 +154,7 @@ public:
 	void setAccount(TThostFtdcBrokerIDType	appId,	TThostFtdcUserIDType	userId,	TThostFtdcPasswordType	passwd);
 
 	//撤单，如需追单，可在报单回报里面等撤单成功后再进行
-	void MaintainOrder(const string& MDtime, double MDprice, string maintainMode, int *tradedVolume);
+	void MaintainOrder(const string& MDtime, double MDprice, string maintainMode, int *tradedVolume, TThostFtdcInstrumentIDType instId);
 
 	//设置交易的合约代码
 	void setInstId(string instId);
@@ -218,6 +230,8 @@ private:
 
 	map<string, CThostFtdcInstrumentField*> m_instMessage_map;//保存合约信息的map
 
+	map<string, pMarketData_message*> m_pMarketData_message_map;//保存自定义的价格信息的map服务于追单
+
 	map<string, string> m_symbol_order_type_map;//保存不同合约因交易所规定限制带来的有限平仓还是对开的map
 	
 	map<string, vector<int>> m_frontsessionref_ordertype; //保存本连接带来的订单类型，这样维护订单的时候如果订单需要撤单和重新挂单有所依据
@@ -231,11 +245,15 @@ private:
 	map<string, CThostFtdcDepthMarketDataField*> m_pDepthMarketData_type;//把和策略相关的行情存储进入到map中，防止其他策略的订阅行情干扰
 
 	//map<int, int> m_requestID_orderRef;//把柜台处理的requestID和订单相关的OrderRef关联起来
+
+	map<int, char> m_brokerorderseq_canceltype;//区别是彻底撤单还是撤单追单，如果是彻底撤单则为'0', 如果继续追单则为'1'
 	
-	
+	map<string, twap_message*> m_twap_message_map;//存储twap状态对象
+
 	map<int, CThostFtdcInputOrderField> m_orderRef_orderreq;//CThostFtdcInputOrderField
 
-	TThostFtdcInstrumentIDType m_instId;//合约代码
+	//TThostFtdcInstrumentIDType m_instId;//合约代码
+	TThostFtdcInstrumentIDSubscribeType m_instId;//合约代码
 	
 	string m_Instrument_all;//所有合约代码合在一起
 	
@@ -249,12 +267,16 @@ private:
 	bool first_inquiry_Instrument;//是否首次查询合约
 	
 	vector<CThostFtdcOrderField*> orderList;//委托记录，全部合约
+	vector<CThostFtdcOrderField*> currentFrontSessionOrderList;//委托记录，全部合约
     vector<CThostFtdcTradeField*> tradeList;//成交记录，全部合约
 	
 	vector<CThostFtdcTradeField*> tradeList_notClosed_account_long;//未平仓的多单成交记录,整个账户，全部合约
 	vector<CThostFtdcTradeField*> tradeList_notClosed_account_short;//未平仓的空单成交记录,整个账户，全部合约
 
 	string m_tradeDate;//当前交易日，持仓表中的开仓日期不相等，则是昨仓，可以直接赋值
+
+	int m_executed_volume_currentround;
+	int m_target_volume_currentround;
 	
 };
 

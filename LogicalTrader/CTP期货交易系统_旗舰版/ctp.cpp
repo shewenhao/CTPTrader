@@ -26,7 +26,7 @@ string strategykdbscript;
 
 double par1, par2, par3, par4, par5, par6;
 
-int strategyOrderType1, strategyOrderType2, strategyOrderType3;
+int strategyOrderType1, strategyOrderType2, strategyOrderType3, strategyOrderType4, strategyOrderType5, strategyOrderType6;
 
 string strategyPairLeg1Symbol, strategyPairLeg2Symbol, strategyPairLeg3Symbol;
 
@@ -43,21 +43,18 @@ CtpTraderSpi* g_pUserSpi_tradeAll;//全局的TD回调处理类对象，人机交互函数需用到
 //人机交互函数
 DWORD WINAPI ThreadProc(LPVOID lpParameter);
 
-
-
-
-
 int main(int argc, const char* argv[])
 {
 	
 	string strategyAccountParampath = argv[1];
-	//string strategyAccountParampath = "9010_AccountParam_CAI_HAIZHENG_al_5_300_2.ini";
+	//string strategyAccountParampath = "9011_AccountParam_SHE_SIM_zn_8_175_1.ini";
+	//string strategyAccountParampath = "5001_AccountParam_CHENLIANGQING_DONGZHENG_Quote.ini";
 	g_hEvent=CreateEvent(NULL, true, false, NULL); 
 
 	//--------------读取配置文件，获取账户信息、服务器地址、交易的合约代码--------------
 	ReadMessage readMessage;
 	memset(&readMessage, 0, sizeof(readMessage));
-	SetMessage(readMessage, &kdbPort, &strategyVolumeTarget, &strategykdbscript, &par1, &par2, &par3, &par4, &par5, &par6, &strategyOrderType1, &strategyOrderType2, &strategyOrderType3, strategyAccountParampath, &strategyPairLeg1Symbol, &strategyPairLeg2Symbol, &strategyPairLeg3Symbol);	
+	SetMessage(readMessage, &kdbPort, &strategyVolumeTarget, &strategykdbscript, &par1, &par2, &par3, &par4, &par5, &par6, &strategyOrderType1, &strategyOrderType2, &strategyOrderType3, &strategyOrderType4, &strategyOrderType5, &strategyOrderType6, strategyAccountParampath, &strategyPairLeg1Symbol, &strategyPairLeg2Symbol, &strategyPairLeg3Symbol);
 
 	SetConsoleTitle(("CTP" + (strategyAccountParampath)).c_str());
 
@@ -91,7 +88,7 @@ int main(int argc, const char* argv[])
 
 	//--------------创建策略实例--------------------------------------------------------
 	g_strategy = new Strategy(pUserSpi_trade);
-	g_strategy->Init(readMessage.m_strategy_strategytype, readMessage.m_read_contract, kdbPort, kdbScriptExePath, strategyVolumeTarget, strategykdbscript, par1, par2, par3, par4, par5, par6, strategyOrderType1, strategyOrderType2, strategyOrderType3, strategyPairLeg1Symbol,strategyPairLeg2Symbol, strategyPairLeg2Symbol);
+	g_strategy->Init(readMessage.m_strategy_strategytype, readMessage.m_read_contract, kdbPort, kdbScriptExePath, strategyVolumeTarget, strategykdbscript, par1, par2, par3, par4, par5, par6, strategyOrderType1, strategyOrderType2, strategyOrderType3, strategyOrderType4, strategyOrderType5, strategyOrderType6, strategyPairLeg1Symbol, strategyPairLeg2Symbol, strategyPairLeg2Symbol);
 	
 
 
@@ -124,8 +121,6 @@ int main(int argc, const char* argv[])
 	}
 	
 }
-
-
 
 //人机交互函数
 DWORD WINAPI ThreadProc(

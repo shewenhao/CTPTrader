@@ -78,6 +78,8 @@ typedef char TThostFtdcClientIDType[11];
 //typedef char TThostFtdcInstrumentIDType[31];
 typedef char TThostFtdcInstrumentIDType[31];
 
+typedef char TThostFtdcInstrumentIDSubscribeType[301];
+
 /////////////////////////////////////////////////////////////////////////
 ///TFtdcMarketIDType是一个市场代码类型
 /////////////////////////////////////////////////////////////////////////

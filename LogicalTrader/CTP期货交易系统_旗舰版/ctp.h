@@ -59,12 +59,19 @@ struct ReadMessage
 	int m_strategy_orderType2 = 0;
 
 	int m_strategy_orderType3 = 0;
+
+	int m_strategy_orderType4 = 0;
+
+	int m_strategy_orderType5 = 0;
+
+	int m_strategy_orderType6 = 0;
 };
 
 kdb::Connector kdbConnectorSetGet;
 string kdbShortLongSetPath;
 string kdbShortSetPath;
 string kdbDataSetPath;
+string kdbDataQuoteSetPath;
 string kdbDataGetPath;
 string specificFolderPath = "/KDB_Scripts/";
 string kdbScriptExePath;
@@ -103,7 +110,7 @@ void kdbSetData()
 {
 	kdbConnectorSetGet.sync("Quote:-500000#select from Quote;");
 	kdbConnectorSetGet.sync("delete from `Quote where Date.minute > 02:30:00, Date.minute <= 09:00:00;delete from `Quote where Date.minute > 11:30:00, Date.minute < 13:00:00;delete from `Quote where Date.minute > 15:15:00, Date.minute < 21:00:00;");
-	kdbConnectorSetGet.sync(kdbDataSetPath.c_str());
+	kdbConnectorSetGet.sync(kdbDataQuoteSetPath.c_str());
 }
 
 void kdbSetShortLong()
@@ -144,7 +151,7 @@ string return_current_time_and_date1()
 	return (ss.str()).append(".").append(to_string(milliseconds.count()));
 }
 
-void SetMessage(ReadMessage& readMessage, int *kdbPort, int *strategyVolumeTarget, string *strategykdbscript, double *par1, double *par2, double *par3, double *par4, double *par5, double *par6, int *strategy_orderType1, int *strategy_orderType2, int *strategy_orderType3, string strategyAccountParampath, string *strategyPairLeg1Symbol, string *strategyPairLeg2Symbol, string *strategyPairLeg3Symbol)//要用引用
+void SetMessage(ReadMessage& readMessage, int *kdbPort, int *strategyVolumeTarget, string *strategykdbscript, double *par1, double *par2, double *par3, double *par4, double *par5, double *par6, int *strategy_orderType1, int *strategy_orderType2, int *strategy_orderType3, int *strategy_orderType4, int *strategy_orderType5, int *strategy_orderType6, string strategyAccountParampath, string *strategyPairLeg1Symbol, string *strategyPairLeg2Symbol, string *strategyPairLeg3Symbol)//要用引用
 {
 	kdbDataSetPath = ExePath();
 	acountParampath = kdbDataSetPath + "/Input/" + strategyAccountParampath;
@@ -155,6 +162,7 @@ void SetMessage(ReadMessage& readMessage, int *kdbPort, int *strategyVolumeTarge
 	kdbScriptExePath = "\\l " + kdbDataSetPath + specificFolderPath;
 	kdbDataGetPath = "Quote: get `:" + kdbDataSetPath + "/Quote;";
 	kdbDataSetPath = "`:" + kdbDataSetPath + "/Quote set Quote;";
+	kdbDataQuoteSetPath = kdbDataSetPath;
 	kdbShortLongSetPath = replaceAll(kdbDataSetPath, "Quote", "ShortLong");
 	//kdbGetData();
 
@@ -263,6 +271,21 @@ void SetMessage(ReadMessage& readMessage, int *kdbPort, int *strategyVolumeTarge
 	GetPrivateProfileString("StrategySetting", "strategy_orderType3", "StrategySetting_error", read_strategy_orderType3.GetBuffer(MAX_PATH), MAX_PATH, acountParampath.c_str());
 	readMessage.m_strategy_orderType3 = atoi(read_strategy_orderType3);
 	*strategy_orderType3 = readMessage.m_strategy_orderType3;
+
+	CString read_strategy_orderType4;
+	GetPrivateProfileString("StrategySetting", "strategy_orderType4", "StrategySetting_error", read_strategy_orderType4.GetBuffer(MAX_PATH), MAX_PATH, acountParampath.c_str());
+	readMessage.m_strategy_orderType4 = atoi(read_strategy_orderType4);
+	*strategy_orderType4 = readMessage.m_strategy_orderType4;
+
+	CString read_strategy_orderType5;
+	GetPrivateProfileString("StrategySetting", "strategy_orderType5", "StrategySetting_error", read_strategy_orderType5.GetBuffer(MAX_PATH), MAX_PATH, acountParampath.c_str());
+	readMessage.m_strategy_orderType5 = atoi(read_strategy_orderType5);
+	*strategy_orderType5 = readMessage.m_strategy_orderType5;
+
+	CString read_strategy_orderType6;
+	GetPrivateProfileString("StrategySetting", "strategy_orderType6", "StrategySetting_error", read_strategy_orderType6.GetBuffer(MAX_PATH), MAX_PATH, acountParampath.c_str());
+	readMessage.m_strategy_orderType6 = atoi(read_strategy_orderType6);
+	*strategy_orderType6 = readMessage.m_strategy_orderType6;
 
 	//-------------------------------设置数据合约-------------------------------
 	CString read_strategyPairLeg1Symbol;

@@ -2,9 +2,7 @@
 #include<fstream>
 #include<io.h>
 #include<algorithm>
-
 #include "StructFunction.h"
-
 
 //读取历史K线
 void ReadDatas(string fileName, vector<History_data> &history_data_vec)
@@ -65,10 +63,6 @@ void ReadDatas(string fileName, vector<History_data> &history_data_vec)
 	file1.close();
 }
 
-
-
-
-
 int Store_fileName(string path, vector<string> &FileName)
 {
 	struct _finddata_t fileinfo;  
@@ -100,4 +94,10 @@ int Store_fileName(string path, vector<string> &FileName)
 		return 0;
 
 	}
+}
+
+string String_StripNum(string s)
+{
+	s.erase(remove_if(s.begin(), s.end(), [](char c) { return !isalpha(c); }), s.end());
+	return s;
 }
