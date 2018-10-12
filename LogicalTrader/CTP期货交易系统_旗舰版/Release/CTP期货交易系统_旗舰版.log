@@ -1,4 +1,4 @@
-﻿Build started 2018/10/9 14:49:21.
+﻿Build started 2018/10/10 22:27:03.
      1>Project "D:\Coding_Applications\Codes\Github\CTPTrader\LogicalTrader\CTP期货交易系统_旗舰版\CTP期货交易系统_旗舰版.vcxproj" on node 2 (Rebuild target(s)).
      1>ClCompile:
          D:\Coding_Applications\VisualStudio2013\VC\bin\CL.exe /c /Zi /nologo /W3 /WX- /O2 /Oi /Oy- /GL /D WIN32 /D NDEBUG /D _CONSOLE /D _MBCS /Gm- /EHsc /MTd /GS /Gy /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Release\\" /Fd"Release\vc120.pdb" /Gd /TP /analyze- /errorReport:prompt ctp.cpp kdb_function.cpp mdspi.cpp strategy.cpp StructFunction.cpp traderspi.cpp
@@ -44,4 +44,4 @@
 
 Build succeeded.
 
-Time Elapsed 00:00:21.89
+Time Elapsed 00:00:24.10

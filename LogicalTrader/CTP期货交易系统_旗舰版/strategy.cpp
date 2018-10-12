@@ -369,7 +369,7 @@ void Strategy::CheckingPosition(CThostFtdcDepthMarketDataField *pDepthMarketData
 {
 	if (strcmp(pDepthMarketData->InstrumentID, m_instId) == 0 && !TDSpi_stgy->Check_OrderList_TwapMessage(pDepthMarketData->InstrumentID))
 	{
-		TThostFtdcInstrumentIDType    instId;//合约,合约代码在结构体里已经有了
+		TThostFtdcInstrumentIDType    instId;//合约代码在结构体里已经包含
 		strcpy_s(instId, m_instId);
 		string instIDString = instId;
 		string order_type = TDSpi_stgy->Send_TThostFtdcCombOffsetFlagType(instIDString.substr(0, 2));

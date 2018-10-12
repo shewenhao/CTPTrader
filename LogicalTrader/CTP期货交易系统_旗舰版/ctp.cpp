@@ -46,8 +46,8 @@ DWORD WINAPI ThreadProc(LPVOID lpParameter);
 int main(int argc, const char* argv[])
 {
 	
-	string strategyAccountParampath = argv[1];
-	//string strategyAccountParampath = "9011_AccountParam_SHE_SIM_zn_8_175_1.ini";
+	//string strategyAccountParampath = argv[1];
+	string strategyAccountParampath = "9011_AccountParam_SHE_SIM_zn_8_175_1.ini";
 	//string strategyAccountParampath = "5001_AccountParam_CHENLIANGQING_DONGZHENG_Quote.ini";
 	g_hEvent=CreateEvent(NULL, true, false, NULL); 
 

@@ -600,7 +600,7 @@ void CtpTraderSpi::OnRspOrderInsert(CThostFtdcInputOrderField *pInputOrder,
 
 		}
 	}
-
+	
 	if(bIsLast) SetEvent(g_hEvent);	
 }
 
@@ -623,11 +623,11 @@ bool CtpTraderSpi::Check_OrderList_TwapMessage(string instId)
 	}
 	else 
 	{
-		if (m_twap_message_map[instId]->vol > m_twap_message_map[instId]->vol)
+		if (m_twap_message_map[instId]->vol > m_twap_message_map[instId]->executedvol)
 		{
 			twapmessagefound = true;
 		}
-		else if (m_twap_message_map[instId]->vol == m_twap_message_map[instId]->vol)
+		else if (m_twap_message_map[instId]->vol == m_twap_message_map[instId]->executedvol)
 		{
 			twapmessagefound = false;
 		}
@@ -711,6 +711,9 @@ void CtpTraderSpi::OnRtnOrder(CThostFtdcOrderField *pOrder)
 	}
 	if(founded) orderList[i]= order;
 	else  orderList.push_back(order);
+
+	//current session 合约
+	OnTwap_OrderMaintain_InstId(pOrder);
 
 	cerr<<"---------------------------------------------------------"<<endl;
 	cerr<<" 回报 | 报单已提交...序号(经纪公司报单编号):"<<order->BrokerOrderSeq<<endl//经纪公司报单编号，撤单时可以找到单子
@@ -1033,7 +1036,7 @@ void CtpTraderSpi::OnTwap_OrderMaintain_InstId(CThostFtdcOrderField *pOrder)
 	{
 		bool founded = false;    unsigned int i = 0;
 		for (i = 0; i<currentFrontSessionOrderList.size(); i++){
-			if (orderList[i]->BrokerOrderSeq == order->BrokerOrderSeq) {//经纪公司报单编号
+			if (currentFrontSessionOrderList[i]->BrokerOrderSeq == order->BrokerOrderSeq) {//经纪公司报单编号
 				founded = true;    break;
 			}
 		}
@@ -1044,14 +1047,14 @@ void CtpTraderSpi::OnTwap_OrderMaintain_InstId(CThostFtdcOrderField *pOrder)
 
 void CtpTraderSpi::OnTwap_TradeMaintain_InstId(CThostFtdcTradeField *pTrade)
 {
-	if (!Check_OrderList_TwapMessage(pTrade->InstrumentID))
+	if (Check_OrderList_TwapMessage(pTrade->InstrumentID))
 	{
 		CThostFtdcTradeField* trade_account = new CThostFtdcTradeField();
 		memcpy(trade_account, pTrade, sizeof(CThostFtdcTradeField));
 		//对twap单腿下单进行跟踪处理，如果单腿twap下单单量够了，那么这里触发下一次下单；有一些tricky的地方，就是确认单子到底来源于哪里，必须做一些假设，比如程序不会中断
 		bool bosfounded = false;    unsigned int j = 0;
 		for (j = 0; j < currentFrontSessionOrderList.size(); j++){
-			if (orderList[j]->BrokerOrderSeq == trade_account->BrokerOrderSeq) {//经纪公司报单编号
+			if (currentFrontSessionOrderList[j]->BrokerOrderSeq == trade_account->BrokerOrderSeq) {//经纪公司报单编号
 				bosfounded = true;    break;
 			}
 		}
@@ -1068,28 +1071,32 @@ void CtpTraderSpi::OnTwap_TradeMaintain_InstId(CThostFtdcTradeField *pTrade)
 			strcpy(kpp, "0");
 			//vol//要用剩余数量
 			m_twap_message_map[trade_account->InstrumentID]->executedvol = m_twap_message_map[trade_account->InstrumentID]->executedvol + trade_account->Volume;
-
 			m_executed_volume_currentround = m_executed_volume_currentround + trade_account->Volume;
+			int executedvol = m_twap_message_map[trade_account->InstrumentID]->executedvol;
+			int orderTypevol = m_twap_message_map[trade_account->InstrumentID]->vol;
+			int stepvol = m_twap_message_map[trade_account->InstrumentID]->orderType[4];
+
 			if (m_executed_volume_currentround == m_target_volume_currentround && m_target_volume_currentround > 0)
 			{
-				if (m_twap_message_map[trade_account->InstrumentID]->vol == m_twap_message_map[trade_account->InstrumentID]->executedvol)
+				if (orderTypevol == executedvol)
 				{
 					m_executed_volume_currentround = 0;
 					m_target_volume_currentround = 0;
 
 				}
-				else if ((int)(m_twap_message_map[trade_account->InstrumentID]->vol - m_twap_message_map[trade_account->InstrumentID]->executedvol) / m_twap_message_map[trade_account->InstrumentID]->order_type[4] > 0)
+				else if ((int)(orderTypevol - executedvol) / stepvol > 0)
 				{
 					m_executed_volume_currentround = 0;
-					m_target_volume_currentround = m_twap_message_map[trade_account->InstrumentID]->order_type[4];
-					SendOrderDecoration(instId, m_frontsessionref_order_type[to_string(frontId) + to_string(sessionId) + strOrderRef], dir, &kpp, m_twap_message_map[trade_account->InstrumentID]->askprice, m_twap_message_map[trade_account->InstrumentID]->bidprice, price, m_twap_message_map[trade_account->InstrumentID]->order_type[4], m_frontsessionref_ordertype[to_string(frontId) + to_string(sessionId) + strOrderRef], pDepthMarketDataTD);
+					m_target_volume_currentround = stepvol;
+					SendOrderDecoration(instId, m_frontsessionref_order_type[to_string(frontId) + to_string(sessionId) + strOrderRef], dir, &kpp, m_twap_message_map[trade_account->InstrumentID]->askprice, m_twap_message_map[trade_account->InstrumentID]->bidprice, price, stepvol, m_frontsessionref_ordertype[to_string(frontId) + to_string(sessionId) + strOrderRef], pDepthMarketDataTD);
 
 				}
-				else if ((int)(m_twap_message_map[trade_account->InstrumentID]->vol - m_twap_message_map[trade_account->InstrumentID]->executedvol) / m_twap_message_map[trade_account->InstrumentID]->order_type[4] == 0 && (m_twap_message_map[trade_account->InstrumentID]->vol - m_twap_message_map[trade_account->InstrumentID]->executedvol) % m_twap_message_map[trade_account->InstrumentID]->order_type[4] > 0)
+				else if ((int)(orderTypevol - executedvol) / stepvol == 0 && (vol - executedvol) % stepvol > 0)
 				{
+
 					m_executed_volume_currentround = 0;
-					m_target_volume_currentround = (m_twap_message_map[trade_account->InstrumentID]->vol - m_twap_message_map[trade_account->InstrumentID]->executedvol);
-					SendOrderDecoration(instId, m_frontsessionref_order_type[to_string(frontId) + to_string(sessionId) + strOrderRef], dir, &kpp, m_twap_message_map[trade_account->InstrumentID]->askprice, m_twap_message_map[trade_account->InstrumentID]->bidprice, price, m_twap_message_map[trade_account->InstrumentID]->vol, m_frontsessionref_ordertype[to_string(frontId) + to_string(sessionId) + strOrderRef], pDepthMarketDataTD);
+					m_target_volume_currentround = (orderTypevol - executedvol);
+					SendOrderDecoration(instId, m_frontsessionref_order_type[to_string(frontId) + to_string(sessionId) + strOrderRef], dir, &kpp, m_twap_message_map[trade_account->InstrumentID]->askprice, m_twap_message_map[trade_account->InstrumentID]->bidprice, price, vol % stepvol, m_frontsessionref_ordertype[to_string(frontId) + to_string(sessionId) + strOrderRef], pDepthMarketDataTD);
 
 				}
 
@@ -1299,7 +1306,8 @@ void CtpTraderSpi::MaintainOrder(const string& MDtime, double MDprice, string ma
 		{
 			if ((*iter)->OrderStatus == '3' || (*iter)->OrderStatus == '1')//未成交还在队列中,部分成交还在队列中
 			{
-				if ((*iter)->FrontID == frontId && (*iter)->SessionID == sessionId && (*iter)->InstrumentID == instId)
+				if ((*iter)->FrontID == frontId && (*iter)->SessionID == sessionId && strcmp((*iter)->InstrumentID, instId) == 0)
+				//if ((*iter)->FrontID == frontId && (*iter)->SessionID == sessionId)
 				{
 					string strOrderRef = (*iter)->OrderRef;
 					SetPrice = (*iter)->LimitPrice;
