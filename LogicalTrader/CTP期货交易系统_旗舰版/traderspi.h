@@ -101,6 +101,9 @@ public:
 	//策略判断指定合约是否有orderlist排队或者twap_message_p里包含有相关合约未执行完毕的合约
 	virtual bool CtpTraderSpi::Check_OrderList_TwapMessage(string instId);
 
+	//判断市场数据是否已经保存入Map
+	virtual bool CtpTraderSpi::FindinstIdMarketDataField(TThostFtdcInstrumentIDType instId);
+
 public:
 	///用户登录请求
 	void ReqUserLogin(TThostFtdcBrokerIDType	appId,
@@ -278,6 +281,8 @@ private:
 	int m_executed_volume_currentround;
 	int m_target_volume_currentround;
 	
+	map<string, int> m_instId_executed_volume;//CThostFtdcInputOrderField
+	map<string, int> m_instId_target_volume;//CThostFtdcInputOrderField
 };
 
 #endif

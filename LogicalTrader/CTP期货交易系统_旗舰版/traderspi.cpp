@@ -1058,6 +1058,7 @@ void CtpTraderSpi::OnTwap_TradeMaintain_InstId(CThostFtdcTradeField *pTrade)
 				bosfounded = true;    break;
 			}
 		}
+		
 		if (bosfounded)
 		{
 			string strOrderRef = trade_account->OrderRef;
@@ -1070,32 +1071,35 @@ void CtpTraderSpi::OnTwap_TradeMaintain_InstId(CThostFtdcTradeField *pTrade)
 			dir = trade_account->Direction;
 			strcpy(kpp, "0");
 			//vol//要用剩余数量
+			//m_instId_executed_volume.find(twap_message_p->instId)->second = 0;
+			//m_instId_target_volume.find(twap_message_p->instId)->second = twap_message_p->orderType[4];
+
 			m_twap_message_map[trade_account->InstrumentID]->executedvol = m_twap_message_map[trade_account->InstrumentID]->executedvol + trade_account->Volume;
-			m_executed_volume_currentround = m_executed_volume_currentround + trade_account->Volume;
+			m_instId_executed_volume.find(pTrade->InstrumentID)->second = m_instId_executed_volume.find(pTrade->InstrumentID)->second + trade_account->Volume;
 			int executedvol = m_twap_message_map[trade_account->InstrumentID]->executedvol;
 			int orderTypevol = m_twap_message_map[trade_account->InstrumentID]->vol;
 			int stepvol = m_twap_message_map[trade_account->InstrumentID]->orderType[4];
 
-			if (m_executed_volume_currentround == m_target_volume_currentround && m_target_volume_currentround > 0)
+			if (m_instId_executed_volume.find(pTrade->InstrumentID)->second == m_instId_target_volume.find(pTrade->InstrumentID)->second && m_instId_target_volume.find(pTrade->InstrumentID)->second > 0)
 			{
 				if (orderTypevol == executedvol)
 				{
-					m_executed_volume_currentround = 0;
-					m_target_volume_currentround = 0;
+					m_instId_executed_volume.find(pTrade->InstrumentID)->second = 0;
+					m_instId_target_volume.find(pTrade->InstrumentID)->second = 0;
 
 				}
 				else if ((int)(orderTypevol - executedvol) / stepvol > 0)
 				{
-					m_executed_volume_currentround = 0;
-					m_target_volume_currentround = stepvol;
+					m_instId_executed_volume.find(pTrade->InstrumentID)->second = 0;
+					m_instId_target_volume.find(pTrade->InstrumentID)->second = stepvol;
 					SendOrderDecoration(instId, m_frontsessionref_order_type[to_string(frontId) + to_string(sessionId) + strOrderRef], dir, &kpp, m_twap_message_map[trade_account->InstrumentID]->askprice, m_twap_message_map[trade_account->InstrumentID]->bidprice, price, stepvol, m_frontsessionref_ordertype[to_string(frontId) + to_string(sessionId) + strOrderRef], pDepthMarketDataTD);
 
 				}
 				else if ((int)(orderTypevol - executedvol) / stepvol == 0 && (vol - executedvol) % stepvol > 0)
 				{
 
-					m_executed_volume_currentround = 0;
-					m_target_volume_currentround = (orderTypevol - executedvol);
+					m_instId_executed_volume.find(pTrade->InstrumentID)->second = 0;
+					m_instId_target_volume.find(pTrade->InstrumentID)->second = (orderTypevol - executedvol);
 					SendOrderDecoration(instId, m_frontsessionref_order_type[to_string(frontId) + to_string(sessionId) + strOrderRef], dir, &kpp, m_twap_message_map[trade_account->InstrumentID]->askprice, m_twap_message_map[trade_account->InstrumentID]->bidprice, price, vol % stepvol, m_frontsessionref_ordertype[to_string(frontId) + to_string(sessionId) + strOrderRef], pDepthMarketDataTD);
 
 				}
@@ -2058,6 +2062,18 @@ void CtpTraderSpi::Set_CThostFtdcDepthMarketDataField(CThostFtdcDepthMarketDataF
 	}
 }
 
+bool CtpTraderSpi::FindinstIdMarketDataField(TThostFtdcInstrumentIDType instId)
+{
+	if (m_pMarketData_message_map.find(instId) == m_pMarketData_message_map.end())
+	{
+		return false;
+	}
+	else
+	{
+		return true;
+	}
+}
+
 void CtpTraderSpi::Twap_Prep(TThostFtdcInstrumentIDType instId, string order_type, TThostFtdcDirectionType dir, TThostFtdcCombOffsetFlagType * kpp, TThostFtdcPriceType askprice, TThostFtdcPriceType bidprice, TThostFtdcPriceType price, TThostFtdcVolumeType vol, vector<int> orderType, CThostFtdcDepthMarketDataField *pDepthMarketData)
 {
 	twap_message* twap_message_p = new twap_message();
@@ -2071,15 +2087,34 @@ void CtpTraderSpi::Twap_Prep(TThostFtdcInstrumentIDType instId, string order_typ
 	twap_message_p->orderType = orderType;
 	twap_message_p->executedvol = 0;
 	
-	map<string, twap_message*>::iterator itor;
+	
+	/*map<string, twap_message*>::iterator itor;
 	for (itor = m_twap_message_map.begin(); itor != m_twap_message_map.end();)
 	{
 		m_twap_message_map.erase(itor++);
+	}*/
+
+	string string_instId = instId;
+	if (!(m_twap_message_map.find(string_instId) == m_twap_message_map.end()))
+	{
+		m_twap_message_map.erase(string_instId);
 	}
 	
-	m_twap_message_map.insert(pair<string, twap_message*> (twap_message_p->instId, twap_message_p));	
-	m_executed_volume_currentround = 0;
-	m_target_volume_currentround = twap_message_p->orderType[4];
+	m_twap_message_map.insert(pair<string, twap_message*> (twap_message_p->instId, twap_message_p));
+	if (m_instId_executed_volume.find(twap_message_p->instId) == m_instId_executed_volume.end())
+	{
+		m_instId_executed_volume.insert(pair<string, int>(twap_message_p->instId, 0));
+		m_instId_target_volume.insert(pair<string, int>(twap_message_p->instId, twap_message_p->orderType[4]));
+	}
+	else
+	{
+		m_instId_executed_volume.find(twap_message_p->instId)->second = 0;
+		m_instId_target_volume.find(twap_message_p->instId)->second = twap_message_p->orderType[4];
+	}
+
+	
+	//m_executed_volume_currentround = 0;
+	//m_target_volume_currentround = twap_message_p->orderType[4];
 	SendOrderDecoration(instId, order_type, dir, kpp, askprice, bidprice, price, min(vol, twap_message_p->orderType[4]), orderType, pDepthMarketData);
 }
 

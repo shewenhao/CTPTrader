@@ -344,22 +344,26 @@ void Strategy::MaintainContract(CThostFtdcDepthMarketDataField *pDepthMarketData
 {
 
 	if (strcmp(pDepthMarketData->InstrumentID, m_instId) != 0 && String_StripNum(pDepthMarketData->InstrumentID) == String_StripNum(m_instId))
-	{
+	{		
 		if (TDSpi_stgy->SendHolding_long(pDepthMarketData->InstrumentID) > 0 && !TDSpi_stgy->Check_OrderList_TwapMessage(pDepthMarketData->InstrumentID))
 		{
 			string instIDString = pDepthMarketData->InstrumentID;
 			TThostFtdcCombOffsetFlagType  kpp = "8";
-			vector<int> orderType_erase = {1, 1, 10, 10, 1, 0 };
+			vector<int> orderType_erase = {1, 1, 0, 0, 1, 0 };
 
  			TDSpi_stgy->Twap_Prep(pDepthMarketData->InstrumentID, TDSpi_stgy->Send_TThostFtdcCombOffsetFlagType(instIDString.substr(0, 2)), '1', &kpp, pDepthMarketData->AskPrice1, pDepthMarketData->BidPrice1, pDepthMarketData->AskPrice1, TDSpi_stgy->SendHolding_long(pDepthMarketData->InstrumentID), orderType_erase, pDepthMarketData);
+
+			//TDSpi_stgy->Twap_Prep(m_instId, TDSpi_stgy->Send_TThostFtdcCombOffsetFlagType(instIDString.substr(0, 2)), '0', &kpp, pDepthMarketData->AskPrice1, pDepthMarketData->BidPrice1, pDepthMarketData->AskPrice1, TDSpi_stgy->SendHolding_long(pDepthMarketData->InstrumentID), orderType_erase, pDepthMarketData);
 		}
 		else if (TDSpi_stgy->SendHolding_long(pDepthMarketData->InstrumentID) == 0 && TDSpi_stgy->SendHolding_short(pDepthMarketData->InstrumentID) > 0 && !TDSpi_stgy->Check_OrderList_TwapMessage(pDepthMarketData->InstrumentID))
 		{
 			string instIDString = pDepthMarketData->InstrumentID;
 			TThostFtdcCombOffsetFlagType  kpp = "8";
-			vector<int> orderType_erase = {1, 1, 10, 10, 1, 0 };
+			vector<int> orderType_erase = {1, 1, 0, 0, 1, 0 };
 
 			TDSpi_stgy->Twap_Prep(pDepthMarketData->InstrumentID, TDSpi_stgy->Send_TThostFtdcCombOffsetFlagType(instIDString.substr(0, 2)), '0', &kpp, pDepthMarketData->AskPrice1, pDepthMarketData->BidPrice1, pDepthMarketData->BidPrice1, TDSpi_stgy->SendHolding_short(pDepthMarketData->InstrumentID), orderType_erase, pDepthMarketData);
+
+			//TDSpi_stgy->Twap_Prep(m_instId, TDSpi_stgy->Send_TThostFtdcCombOffsetFlagType(instIDString.substr(0, 2)), '1', &kpp, pDepthMarketData->AskPrice1, pDepthMarketData->BidPrice1, pDepthMarketData->BidPrice1, TDSpi_stgy->SendHolding_short(pDepthMarketData->InstrumentID), orderType_erase, pDepthMarketData);
 		}
 		
 	}
@@ -387,6 +391,13 @@ void Strategy::CheckingPosition(CThostFtdcDepthMarketDataField *pDepthMarketData
 		m_ReadLegOneAskPrice1 = res.res_->f;
 		res = kdbConnector.sync("exec last LegOneBidPrice1 from ShortLong");
 		m_ReadLegOneBidPrice1 = res.res_->f;
+
+		if (m_ReadLegOneAskPrice1 >= pDepthMarketData->UpperLimitPrice || m_ReadLegOneAskPrice1 <= pDepthMarketData->LowerLimitPrice || m_ReadLegOneBidPrice1 >= pDepthMarketData->UpperLimitPrice || m_ReadLegOneBidPrice1 <= pDepthMarketData->LowerLimitPrice)
+		{
+			m_ReadLegOneAskPrice1 = pDepthMarketData->AskPrice1;
+			m_ReadLegOneBidPrice1 = pDepthMarketData->BidPrice1;
+		}
+
 		m_ShortLongInitNum = m_ReadShortLongInitNum;
 		m_CheckLegOneAskPrice1 = pDepthMarketData->AskPrice1;
 		m_CheckLegOneBidPrice1 = pDepthMarketData->BidPrice1;
