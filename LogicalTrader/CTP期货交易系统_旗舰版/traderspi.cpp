@@ -5,6 +5,11 @@
 #include "StructFunction.h"
 #include "strategy.h"
 #include <fstream>
+#include "Logger.h"
+
+using namespace std;
+using namespace CPlusPlusLogging;
+
 
 #pragma warning(disable :4996)
 
@@ -32,7 +37,7 @@ CThostFtdcDepthMarketDataField *pDepthMarketDataTD;
 void CtpTraderSpi::OnFrontConnected()
 {
 	cerr<<"Trader Init()调用成功"<<"Trader 连接交易前置...成功"<<endl;
-
+	LOG_ALWAYS("<=============================== START OF PROGRAM CTP TRADER ===============================>");
 	//配置品种开平规则
 	define_TThostFtdcCombOffsetFlagType();
 

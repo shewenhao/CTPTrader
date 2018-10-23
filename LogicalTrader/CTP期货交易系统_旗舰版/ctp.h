@@ -111,7 +111,9 @@ void kdbSetData()
 	kdbConnectorSetGet.sync("Quote:-500000#select from Quote;");
 	kdbConnectorSetGet.sync("delete from `Quote where Date.minute > 02:30:00, Date.minute <= 09:00:00;delete from `Quote where Date.minute > 11:30:00, Date.minute < 13:00:00;delete from `Quote where Date.minute > 15:15:00, Date.minute < 21:00:00;");
 	kdbConnectorSetGet.sync(kdbDataQuoteSetPath.c_str());
+	//g_strategy->DataRebootDADataSource();
 }
+
 
 void kdbSetShortLong()
 {
@@ -151,9 +153,10 @@ string return_current_time_and_date1()
 	return (ss.str()).append(".").append(to_string(milliseconds.count()));
 }
 
-void SetMessage(ReadMessage& readMessage, int *kdbPort, int *strategyVolumeTarget, string *strategykdbscript, double *par1, double *par2, double *par3, double *par4, double *par5, double *par6, int *strategy_orderType1, int *strategy_orderType2, int *strategy_orderType3, int *strategy_orderType4, int *strategy_orderType5, int *strategy_orderType6, string strategyAccountParampath, string *strategyPairLeg1Symbol, string *strategyPairLeg2Symbol, string *strategyPairLeg3Symbol)//要用引用
+void SetMessage(ReadMessage& readMessage, string *exePath, int *kdbPort, int *strategyVolumeTarget, string *strategykdbscript, double *par1, double *par2, double *par3, double *par4, double *par5, double *par6, int *strategy_orderType1, int *strategy_orderType2, int *strategy_orderType3, int *strategy_orderType4, int *strategy_orderType5, int *strategy_orderType6, string strategyAccountParampath, string *strategyPairLeg1Symbol, string *strategyPairLeg2Symbol, string *strategyPairLeg3Symbol)//要用引用
 {
 	kdbDataSetPath = ExePath();
+	*exePath = kdbDataSetPath;
 	acountParampath = kdbDataSetPath + "/Input/" + strategyAccountParampath;
 	acountParampath = replaceAll(acountParampath, "\\", "/");
 	mdflowPath = kdbDataSetPath + "\\MDflow\\";

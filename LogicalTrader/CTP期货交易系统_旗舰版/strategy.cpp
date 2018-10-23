@@ -16,15 +16,19 @@ TThostFtdcVolumeType m_VolumeTarget = 1;
 int m_OrderVolumeMultiple = 2;
 int m_IndexFuturePositionLimit = 20;
 string m_StrategyType = "";
+string m_exePath = "";
 int m_LastedVolume = 0;
 double m_ReadLegOneAskPrice1 = 0.0;
 double m_ReadLegOneBidPrice1 = 0.0;
 double m_CheckLegOneAskPrice1 = 0.0;
 double m_CheckLegOneBidPrice1 = 0.0;
+int m_DAQuoteCount = 0;
+int m_MarketDataCount = 0;
 int m_OnTickCount = 0;
 vector<int> orderType = { 0, 0, 0, 0, 0, 0 };
 vector<int> orderType_erase = { 1, 1, 10, 10, 1, 0 };
 int n = 0;
+int n_quote = 0;
 
 //难易程度:   buy  1,-1,0 的含义是:  在AskPrice1下调一个跳价
 //           sell 1,-1,0 的含义是:  在BidPrice1上调一个跳价
@@ -36,7 +40,29 @@ void Strategy::OnTickData(CThostFtdcDepthMarketDataField *pDepthMarketData)
 {
 	if (m_StrategyType == "Quote")
 	{
+		//Insert Data To KDB+ DataBase
 		DataInsertToKDB(pDepthMarketData);
+		//Reboost DA Data Source
+		if (n_quote == 0)
+		{
+			DataRebootDADataSource();
+			n_quote++;
+		}
+		else if (n_quote < 1000)
+		{
+			n_quote++;
+		}
+		else if (n_quote >= 1000)
+		{
+			n_quote = 0;
+		}
+
+		
+	}
+	else if (m_StrategyType == "Checker")
+	{
+		//Reboost DA Data Source
+		DataRebootDADataSource();
 	}
 	else
 	{
@@ -85,9 +111,9 @@ void Strategy::OnTickData(CThostFtdcDepthMarketDataField *pDepthMarketData)
 }
 
 //设置交易的合约代码
-void Strategy::Init(string strategyType, string instId, int kdbPort, string kdbScrpit, int strategyVolumeTarget, string strategykdbscript, double par1, double par2, double par3, double par4, double par5, double par6, int strategyOrderType1, int strategyOrderType2, int strategyOrderType3, int strategyOrderType4, int strategyOrderType5, int strategyOrderType6, string strategyPairLeg1Symbol, string strategyPairLeg2Symbol, string strategyPairLeg3Symbol)
+void Strategy::Init(string strategyType, string instId, string exePath, int kdbPort, string kdbScrpit, int strategyVolumeTarget, string strategykdbscript, double par1, double par2, double par3, double par4, double par5, double par6, int strategyOrderType1, int strategyOrderType2, int strategyOrderType3, int strategyOrderType4, int strategyOrderType5, int strategyOrderType6, string strategyPairLeg1Symbol, string strategyPairLeg2Symbol, string strategyPairLeg3Symbol)
 {
-	
+	m_exePath = exePath.append("\\Bats\\DAReboot.bat");
 	m_StrategyType = strategyType;
 	orderType[0] = strategyOrderType1;
 	orderType[1] = strategyOrderType2;
@@ -127,6 +153,7 @@ void Strategy::Init(string strategyType, string instId, int kdbPort, string kdbS
 
 void Strategy::StrategyCalculate(CThostFtdcDepthMarketDataField *pDepthMarketData)
 {
+
 	TThostFtdcInstrumentIDType    instId;//合约,合约代码在结构体里已经有了
 	strcpy_s(instId, m_instId);
 	string instIDString = instId;
@@ -343,7 +370,7 @@ void Strategy::GetHistoryData()
 void Strategy::MaintainContract(CThostFtdcDepthMarketDataField *pDepthMarketData, TThostFtdcInstrumentIDType m_instId)
 {
 
-	if (strcmp(pDepthMarketData->InstrumentID, m_instId) != 0 && String_StripNum(pDepthMarketData->InstrumentID) == String_StripNum(m_instId))
+	if (strcmp(pDepthMarketData->InstrumentID, m_instId) != 0 && String_StripNum(pDepthMarketData->InstrumentID) == String_StripNum(m_instId) && IsMarketOpen())
 	{		
 		if (TDSpi_stgy->SendHolding_long(pDepthMarketData->InstrumentID) > 0 && !TDSpi_stgy->Check_OrderList_TwapMessage(pDepthMarketData->InstrumentID))
 		{
@@ -371,7 +398,8 @@ void Strategy::MaintainContract(CThostFtdcDepthMarketDataField *pDepthMarketData
 
 void Strategy::CheckingPosition(CThostFtdcDepthMarketDataField *pDepthMarketData)
 {
-	if (strcmp(pDepthMarketData->InstrumentID, m_instId) == 0 && !TDSpi_stgy->Check_OrderList_TwapMessage(pDepthMarketData->InstrumentID))
+	
+	if (strcmp(pDepthMarketData->InstrumentID, m_instId) == 0 && !TDSpi_stgy->Check_OrderList_TwapMessage(pDepthMarketData->InstrumentID) && IsMarketOpen())
 	{
 		TThostFtdcInstrumentIDType    instId;//合约代码在结构体里已经包含
 		strcpy_s(instId, m_instId);
@@ -512,6 +540,30 @@ void Strategy::DataInsertToKDB(CThostFtdcDepthMarketDataField *pDepthMarketData)
 	insertstring.append(")");
 	
 	kdbConnector.sync(insertstring.c_str());
+}
+
+void Strategy::DataRebootDADataSource()
+{
+	kdb::Result res = kdbConnector.sync("temp:-500#select from Quote;exec count Date from temp where Symbol = `CA3M");
+	m_DAQuoteCount = res.res_->j;
+	if (m_DAQuoteCount == 0)
+	{
+		system(m_exePath.c_str());
+	}
+}
+
+bool Strategy::IsMarketOpen()
+{
+	kdb::Result res = kdbConnector.sync("LastQuote:-1#select from Quote;delete from `LastQuote where Date.minute > 02:30 : 00, Date.minute < 09 : 00 : 00;delete from `LastQuote where Date.minute > 15 : 00 : 00, Date.minute < 21 : 00 : 00;exec count Date from LastQuote");
+	m_MarketDataCount = res.res_->j;
+	if (m_MarketDataCount > 0)
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
 }
 
 string  Strategy::return_current_time_and_date()

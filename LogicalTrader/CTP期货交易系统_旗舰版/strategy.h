@@ -31,7 +31,7 @@ public:
 	void OnTickData(CThostFtdcDepthMarketDataField *pDepthMarketData);
 
 	//设置交易的合约代码
-	void Init(string strategyType, string instId, int kdbPort, string kdbScript, int strategyVolumeTarget, string strategykdbscript, double par1, double par2, double par3, double par4, double par5, double par6, int strategyOrderType1, int strategyOrderTyep2, int strategyOrderType3, int strategyOrderType4, int strategyOrderType5, int strategyOrderType6, string strategyPairLeg1Symbol, string strategyPairLeg2Symbol, string strategyPairLeg3Symbol);
+	void Init(string strategyType, string instId, string exePath, int kdbPort, string kdbScript, int strategyVolumeTarget, string strategykdbscript, double par1, double par2, double par3, double par4, double par5, double par6, int strategyOrderType1, int strategyOrderTyep2, int strategyOrderType3, int strategyOrderType4, int strategyOrderType5, int strategyOrderType6, string strategyPairLeg1Symbol, string strategyPairLeg2Symbol, string strategyPairLeg3Symbol);
 	
 	//策略主逻辑的计算，70条行情里涨了0.6元，则做多，下跌则做空（系统默认禁止开仓，可在界面输入"yxkc"来允许开仓）
 	void StrategyCalculate(CThostFtdcDepthMarketDataField *pDepthMarketData);
@@ -66,7 +66,11 @@ public:
 	//获得当前时间为kdb+数据插入使用
 	std::string return_current_time_and_date();
 
-	
+	//重启DA数据中心程序
+	void Strategy::DataRebootDADataSource();
+
+	//根据当前KDB数据库最新数据检查是否在
+	bool Strategy::IsMarketOpen();
 
 private:
 
