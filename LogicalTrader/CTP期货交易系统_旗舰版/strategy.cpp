@@ -29,6 +29,8 @@ vector<int> orderType = { 0, 0, 0, 0, 0, 0 };
 vector<int> orderType_erase = { 1, 1, 10, 10, 1, 0 };
 int n = 0;
 int n_quote = 0;
+bool m_IsMarketOpen = false;
+int m_currentIntUpdateTime = 0;
 
 //难易程度:   buy  1,-1,0 的含义是:  在AskPrice1下调一个跳价
 //           sell 1,-1,0 的含义是:  在BidPrice1上调一个跳价
@@ -38,76 +40,79 @@ int n_quote = 0;
 
 void Strategy::OnTickData(CThostFtdcDepthMarketDataField *pDepthMarketData)
 {
-	if (m_StrategyType == "Quote")
+	if (IsMarketOpen)
 	{
-		//Insert Data To KDB+ DataBase
-		DataInsertToKDB(pDepthMarketData);
-		//Reboost DA Data Source
-		if (n_quote == 0)
+
+		if (m_StrategyType == "Quote")
 		{
+			//Insert Data To KDB+ DataBase
+			DataInsertToKDB(pDepthMarketData);
+			//Reboost DA Data Source
+			if (n_quote == 0)
+			{
+				DataRebootDADataSource();
+				n_quote++;
+			}
+			else if (n_quote < 1000)
+			{
+				n_quote++;
+			}
+			else if (n_quote >= 1000)
+			{
+				n_quote = 0;
+			}
+
+
+		}
+		else if (m_StrategyType == "Checker")
+		{
+			//Reboost DA Data Source
 			DataRebootDADataSource();
-			n_quote++;
-		}
-		else if (n_quote < 1000)
-		{
-			n_quote++;
-		}
-		else if (n_quote >= 1000)
-		{
-			n_quote = 0;
-		}
-
-		
-	}
-	else if (m_StrategyType == "Checker")
-	{
-		//Reboost DA Data Source
-		DataRebootDADataSource();
-	}
-	else
-	{
-		//更新TD实例中的行情信息
-
-		//计算账户的盈亏信息
-		CalculateEarningsInfo(pDepthMarketData);
-
-		if (strcmp(pDepthMarketData->InstrumentID, m_instId) == 0)
-		{
-			TDSpi_stgy->Set_CThostFtdcDepthMarketDataField(pDepthMarketData);
-
-			cerr << "策略收到行情:" << pDepthMarketData->InstrumentID << "," << pDepthMarketData->TradingDay << "," << pDepthMarketData->UpdateTime << ",最新价:" << pDepthMarketData->LastPrice << ",涨停价:" << pDepthMarketData->UpperLimitPrice << ",跌停价:" << pDepthMarketData->LowerLimitPrice << endl;
-
-			//保存数据到vector
-			SaveDataVec(pDepthMarketData);
-
-			//保存数据到txt和csv
-			//SaveDataTxtCsv(pDepthMarketData);
-
-			//撤单追单,撤单成功后再追单
-			m_LastedVolume = 0;
-			TDSpi_stgy->MaintainOrder(pDepthMarketData->UpdateTime, pDepthMarketData->LastPrice, "CheckOnTick", &m_LastedVolume, pDepthMarketData->InstrumentID);
-
-			//开仓平仓（策略主逻辑的计算）
-			StrategyCalculate(pDepthMarketData);
-			//检查仓位
-			CheckingPosition(pDepthMarketData);
-
 		}
 		else
 		{
-			MaintainContract(pDepthMarketData, m_instId);
-			TDSpi_stgy->MaintainOrder(pDepthMarketData->UpdateTime, pDepthMarketData->LastPrice, "CheckOnTick", &m_LastedVolume, pDepthMarketData->InstrumentID);
-		}
-		
-	}
+			//更新TD实例中的行情信息
 
-	/*if (n == 0)
-	{
+			//计算账户的盈亏信息
+			CalculateEarningsInfo(pDepthMarketData);
+
+			if (strcmp(pDepthMarketData->InstrumentID, m_instId) == 0)
+			{
+				TDSpi_stgy->Set_CThostFtdcDepthMarketDataField(pDepthMarketData);
+
+				cerr << "策略收到行情:" << pDepthMarketData->InstrumentID << "," << pDepthMarketData->TradingDay << "," << pDepthMarketData->UpdateTime << ",最新价:" << pDepthMarketData->LastPrice << ",涨停价:" << pDepthMarketData->UpperLimitPrice << ",跌停价:" << pDepthMarketData->LowerLimitPrice << endl;
+
+				//保存数据到vector
+				SaveDataVec(pDepthMarketData);
+
+				//保存数据到txt和csv
+				//SaveDataTxtCsv(pDepthMarketData);
+
+				//撤单追单,撤单成功后再追单
+				m_LastedVolume = 0;
+				TDSpi_stgy->MaintainOrder(pDepthMarketData->UpdateTime, pDepthMarketData->LastPrice, "CheckOnTick", &m_LastedVolume, pDepthMarketData->InstrumentID);
+
+				//开仓平仓（策略主逻辑的计算）
+				StrategyCalculate(pDepthMarketData);
+				//检查仓位
+				CheckingPosition(pDepthMarketData);
+
+			}
+			else
+			{
+				MaintainContract(pDepthMarketData, m_instId);
+				TDSpi_stgy->MaintainOrder(pDepthMarketData->UpdateTime, pDepthMarketData->LastPrice, "CheckOnTick", &m_LastedVolume, pDepthMarketData->InstrumentID);
+			}
+
+		}
+
+		/*if (n == 0)
+		{
 		n++;
 		TDSpi_stgy->Testkkk("CLOSE_TODAY_YD_OPEN", { -1, -5, 0 });
 		TDSpi_stgy->ReqOrderInsert("sn1809", '1', "3", 146000, 1);
-	}*/
-	
+		}*/
+	}
 }
 
 //设置交易的合约代码
@@ -126,7 +131,7 @@ void Strategy::Init(string strategyType, string instId, string exePath, int kdbP
 	m_kdbScript = strategykdbscript;
 	m_VolumeTarget = strategyVolumeTarget;
 	string kdb_par_string = "KindleLengthOnSecond:" + to_string((int)par1) + ";" + "WindowFrameLength:" + to_string((int)par2) + ";" + "StandardDeviationTimes:" + to_string(par3) + ";" + "PairLeg1Symbol:" + strategyPairLeg1Symbol + ";" + "PairLeg2Symbol:" + strategyPairLeg2Symbol + ";" + "PairLeg3Symbol:" + strategyPairLeg3Symbol + ";";
-	string kdb_init_string = "h:hopen `::5001;PairFormula:{(x%y)};f:{x%y};bollingerBands: {[k;n;data]      movingAvg: mavg[n;data];    md: sqrt mavg[n;data*data]-movingAvg*movingAvg;      movingAvg+/:(k*-1 0 1)*\\:md};ReceiveTimeToDate:{(\"\"z\"\" $ 1970.01.01+ floor x %86400000000 )+ 08:00:00.000 +\"\"j\"\"$ 0.001* x mod  86400000000};isTable:{if[98h=type x;:1b];if[99h=type x;:98h=type key x];0b};isTable2: {@[{isTable value x}; x; 0b]}; ";
+	string kdb_init_string = "h:hopen `::5002;PairFormula:{(x%y)};f:{x%y};bollingerBands: {[k;n;data]      movingAvg: mavg[n;data];    md: sqrt mavg[n;data*data]-movingAvg*movingAvg;      movingAvg+/:(k*-1 0 1)*\\:md};ReceiveTimeToDate:{(\"\"z\"\" $ 1970.01.01+ floor x %86400000000 )+ 08:00:00.000 +\"\"j\"\"$ 0.001* x mod  86400000000};isTable:{if[98h=type x;:1b];if[99h=type x;:98h=type key x];0b};isTable2: {@[{isTable value x}; x; 0b]}; ";
 	kdbConnector.sync(kdb_init_string.c_str());
 	kdbConnector.sync(kdb_par_string.c_str());
 	m_kdbScript = kdbScrpit + m_kdbScript;
@@ -343,7 +348,7 @@ void Strategy::CalculateEarningsInfo(CThostFtdcDepthMarketDataField *pDepthMarke
 
 	cerr<<" 平仓盈亏:"<<m_closeProfit_account<<",浮动盈亏:"<<m_openProfit_account<<"当前合约:"<<pDepthMarketData->InstrumentID<<" 最新价:"<<pDepthMarketData->LastPrice<<" 时间:"<<pDepthMarketData->UpdateTime<<endl;//double类型为0有时候会是-1.63709e-010，是小于0的，但+1后的值是1
 
-	TDSpi_stgy->printTrade_message_map();
+	//TDSpi_stgy->printTrade_message_map();
 
 
 
@@ -370,7 +375,7 @@ void Strategy::GetHistoryData()
 void Strategy::MaintainContract(CThostFtdcDepthMarketDataField *pDepthMarketData, TThostFtdcInstrumentIDType m_instId)
 {
 
-	if (strcmp(pDepthMarketData->InstrumentID, m_instId) != 0 && String_StripNum(pDepthMarketData->InstrumentID) == String_StripNum(m_instId) && IsMarketOpen())
+	if (strcmp(pDepthMarketData->InstrumentID, m_instId) != 0 && String_StripNum(pDepthMarketData->InstrumentID) == String_StripNum(m_instId))
 	{		
 		if (TDSpi_stgy->SendHolding_long(pDepthMarketData->InstrumentID) > 0 && !TDSpi_stgy->Check_OrderList_TwapMessage(pDepthMarketData->InstrumentID))
 		{
@@ -399,7 +404,7 @@ void Strategy::MaintainContract(CThostFtdcDepthMarketDataField *pDepthMarketData
 void Strategy::CheckingPosition(CThostFtdcDepthMarketDataField *pDepthMarketData)
 {
 	
-	if (strcmp(pDepthMarketData->InstrumentID, m_instId) == 0 && !TDSpi_stgy->Check_OrderList_TwapMessage(pDepthMarketData->InstrumentID) && IsMarketOpen())
+	if (strcmp(pDepthMarketData->InstrumentID, m_instId) == 0 && !TDSpi_stgy->Check_OrderList_TwapMessage(pDepthMarketData->InstrumentID))
 	{
 		TThostFtdcInstrumentIDType    instId;//合约代码在结构体里已经包含
 		strcpy_s(instId, m_instId);
@@ -552,9 +557,9 @@ void Strategy::DataRebootDADataSource()
 	}
 }
 
-bool Strategy::IsMarketOpen()
+bool Strategy::IsMarketOpen(CThostFtdcDepthMarketDataField *pDepthMarketData)
 {
-	kdb::Result res = kdbConnector.sync("LastQuote:-1#select from Quote;delete from `LastQuote where Date.minute > 02:30 : 00, Date.minute < 09 : 00 : 00;delete from `LastQuote where Date.minute > 15 : 00 : 00, Date.minute < 21 : 00 : 00;exec count Date from LastQuote");
+	/*kdb::Result res = kdbConnector.sync("LastQuote:-1#select from Quote;delete from `LastQuote where Date.minute > 02:30:00, Date.minute < 09:00:00;delete from `LastQuote where Date.minute > 15:00:00, Date.minute < 21:00:00;exec count Date from LastQuote");
 	m_MarketDataCount = res.res_->j;
 	if (m_MarketDataCount > 0)
 	{
@@ -563,8 +568,21 @@ bool Strategy::IsMarketOpen()
 	else
 	{
 		return false;
+	}*/
+	//转换Updatetime为整数09：00：00
+	m_currentIntUpdateTime = pDepthMarketData->UpdateTime[0] * 100000 + pDepthMarketData->UpdateTime[1] * 10000 + pDepthMarketData->UpdateTime[3] * 1000 + pDepthMarketData->UpdateTime[4] * 100 + pDepthMarketData->UpdateTime[6] * 10 + pDepthMarketData->UpdateTime[7];
+
+	if ((m_currentIntUpdateTime < 200000 && m_currentIntUpdateTime > 90000) || m_currentIntUpdateTime > 210000)
+	{
+		return true;
+	}
+	else
+	{
+		return false;
 	}
 }
+
+
 
 string  Strategy::return_current_time_and_date()
 {

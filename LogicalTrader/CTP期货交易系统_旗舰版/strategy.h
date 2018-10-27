@@ -70,7 +70,7 @@ public:
 	void Strategy::DataRebootDADataSource();
 
 	//根据当前KDB数据库最新数据检查是否在
-	bool Strategy::IsMarketOpen();
+	bool Strategy::IsMarketOpen(CThostFtdcDepthMarketDataField *pDepthMarketData);
 
 private:
 

@@ -56,6 +56,8 @@ int main(int argc, const char* argv[])
 	string strategyAccountParampath = argv[1];
 	//string strategyAccountParampath = "9011_AccountParam_SHE_SIM_zn_8_175_1.ini";
 	//string strategyAccountParampath = "5001_AccountParam_CHENLIANGQING_DONGZHENG_Quote.ini";
+	//string strategyAccountParampath = "9009_AccountParam_YIN_HAIZHENG_cu_15_50_1.ini";
+	//string strategyAccountParampath = "9010_AccountParam_YIN_HAIZHENG_al_5_300_2.ini";
 	g_hEvent=CreateEvent(NULL, true, false, NULL); 
 
 	//--------------读取配置文件，获取账户信息、服务器地址、交易的合约代码--------------

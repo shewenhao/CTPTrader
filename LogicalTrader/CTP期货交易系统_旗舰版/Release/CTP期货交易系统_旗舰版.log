@@ -1,4 +1,4 @@
-﻿Build started 2018/10/23 14:49:58.
+﻿Build started 2018/10/25 15:15:28.
      1>Project "D:\Coding_Applications\Codes\Github\CTPTrader\LogicalTrader\CTP期货交易系统_旗舰版\CTP期货交易系统_旗舰版.vcxproj" on node 2 (Rebuild target(s)).
      1>ClCompile:
          D:\Coding_Applications\VisualStudio2013\VC\bin\CL.exe /c /Zi /nologo /W3 /WX- /O2 /Oi /Oy- /GL /D WIN32 /D NDEBUG /D _CONSOLE /D _MBCS /Gm- /EHsc /MTd /GS /Gy /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Release\\" /Fd"Release\vc120.pdb" /Gd /TP /analyze- /errorReport:prompt ctp.cpp kdb_function.cpp Logger.cpp mdspi.cpp strategy.cpp StructFunction.cpp traderspi.cpp
@@ -17,13 +17,14 @@
                  D:\Coding_Applications\VisualStudio2013\VC\atlmfc\include\afx.h(33) : see declaration of 'MBCS_Support_Deprecated_In_MFC'
          _WIN32_WINNT not defined. Defaulting to _WIN32_WINNT_MAXVER (see WinSDKVer.h)
          strategy.cpp
-     1>strategy.cpp(139): warning C4244: '=' : conversion from 'J' to 'int', possible loss of data
-     1>strategy.cpp(169): warning C4244: '=' : conversion from 'J' to 'int', possible loss of data
-     1>strategy.cpp(182): warning C4244: '=' : conversion from 'J' to 'int', possible loss of data
-     1>strategy.cpp(414): warning C4244: '=' : conversion from 'J' to 'int', possible loss of data
-     1>strategy.cpp(432): warning C4244: '=' : conversion from 'J' to 'int', possible loss of data
-     1>strategy.cpp(545): warning C4244: '=' : conversion from 'J' to 'int', possible loss of data
-     1>strategy.cpp(558): warning C4996: 'localtime': This function or variable may be unsafe. Consider using localtime_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+     1>strategy.cpp(140): warning C4244: '=' : conversion from 'J' to 'int', possible loss of data
+     1>strategy.cpp(171): warning C4244: '=' : conversion from 'J' to 'int', possible loss of data
+     1>strategy.cpp(184): warning C4244: '=' : conversion from 'J' to 'int', possible loss of data
+     1>strategy.cpp(417): warning C4244: '=' : conversion from 'J' to 'int', possible loss of data
+     1>strategy.cpp(435): warning C4244: '=' : conversion from 'J' to 'int', possible loss of data
+     1>strategy.cpp(548): warning C4244: '=' : conversion from 'J' to 'int', possible loss of data
+     1>strategy.cpp(558): warning C4244: '=' : conversion from 'J' to 'int', possible loss of data
+     1>strategy.cpp(575): warning C4996: 'localtime': This function or variable may be unsafe. Consider using localtime_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
                  D:\Coding_Applications\VisualStudio2013\VC\include\time.inl(112) : see declaration of 'localtime'
          StructFunction.cpp
      1>D:\Coding_Applications\VisualStudio2013\VC\atlmfc\include\afx.h(38): warning C4996: 'MBCS_Support_Deprecated_In_MFC': MBCS support in MFC is deprecated and may be removed in a future version of MFC.
@@ -49,4 +50,4 @@
 
 Build succeeded.
 
-Time Elapsed 00:00:21.38
+Time Elapsed 00:00:34.80

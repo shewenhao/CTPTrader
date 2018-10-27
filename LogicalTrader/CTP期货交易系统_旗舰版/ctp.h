@@ -117,7 +117,7 @@ void kdbSetData()
 
 void kdbSetShortLong()
 {
-	kdbConnectorSetGet.sync(kdbShortLongSetPath.c_str());
+	//kdbConnectorSetGet.sync(kdbShortLongSetPath.c_str());
 }
 
 void kdbGetData()
