@@ -60,6 +60,7 @@ int main(int argc, const char* argv[])
 	//string strategyAccountParampath = "9010_AccountParam_YIN_HAIZHENG_al_5_300_2.ini";
 	//string strategyAccountParampath = "9009_AccountParam_SHEWENHAO_SIM_cu_5_300_2.ini";
 	//string strategyAccountParampath = "9009_AccountParam_WANGSHANG_DONGZHENG_cu_15_50_1.ini";
+	//string strategyAccountParampath = "9009_AccountParam_YIN_HAIZHENG_cu_15_50_1.ini";
 	g_hEvent=CreateEvent(NULL, true, false, NULL); 
 
 	//--------------读取配置文件，获取账户信息、服务器地址、交易的合约代码--------------
@@ -89,7 +90,7 @@ int main(int argc, const char* argv[])
 	pUserApi_trade->SubscribePublicTopic(THOST_TERT_RESTART);// 注册公有流
 	pUserApi_trade->SubscribePrivateTopic(THOST_TERT_QUICK);// 注册私有流THOST_TERT_QUICK
 	pUserApi_trade->RegisterFront(readMessage.m_tradeFront);// 注册交易前置地址
-	pUserSpi_trade->setAccount(readMessage.m_appId, readMessage.m_userId, readMessage.m_passwd);//经纪公司编号，用户名，密码	
+	pUserSpi_trade->setAccount(readMessage.m_appId, readMessage.m_userId, readMessage.m_passwd, readMessage.m_userProductInfo, readMessage.m_authCode);//经纪公司编号，用户名，密码	
 	pUserSpi_trade->setInstId(readMessage.m_read_contract);//策略交易的合约
 
 	g_pUserSpi_tradeAll = pUserSpi_trade;//全局的TD回调处理类对象，人机交互函数需用到

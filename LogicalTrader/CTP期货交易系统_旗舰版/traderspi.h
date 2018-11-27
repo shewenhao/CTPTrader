@@ -32,6 +32,9 @@ public:
 	///当客户端与交易后台建立起通信连接时（还未登录前），该方法被调用。
 	virtual void OnFrontConnected();
 
+	//发送认证请求响应
+	void OnRspAuthenticate(CThostFtdcRspAuthenticateField *pRspAuthenticateField, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
+
 	///登录请求响应
 	virtual void OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin,	CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
 
@@ -105,6 +108,9 @@ public:
 	virtual bool CtpTraderSpi::FindinstIdMarketDataField(TThostFtdcInstrumentIDType instId);
 
 public:
+	///期货公司认证
+	void ReqAuthenticate(TThostFtdcBrokerIDType	BrokerID, TThostFtdcUserIDType	UserID,	TThostFtdcProductInfoType	UserProductInfo, TThostFtdcAuthCodeType	AuthCode);
+
 	///用户登录请求
 	void ReqUserLogin(TThostFtdcBrokerIDType	appId,
 		TThostFtdcUserIDType	userId,	TThostFtdcPasswordType	passwd);
@@ -154,7 +160,7 @@ public:
 	void ReqQryInvestorPositionDetail();
 
 	//账号设置
-	void setAccount(TThostFtdcBrokerIDType	appId,	TThostFtdcUserIDType	userId,	TThostFtdcPasswordType	passwd);
+	void setAccount(TThostFtdcBrokerIDType	appId, TThostFtdcUserIDType	userId, TThostFtdcPasswordType	passwd, TThostFtdcProductInfoType	userProductInfo, TThostFtdcAuthCodeType	authCode);
 
 	//撤单，如需追单，可在报单回报里面等撤单成功后再进行
 	void MaintainOrder(const string& MDtime, double MDprice, string maintainMode, int *tradedVolume, TThostFtdcInstrumentIDType instId);
@@ -223,6 +229,8 @@ private:
 	TThostFtdcBrokerIDType	m_appId;// 应用单元
 	TThostFtdcUserIDType	m_userId;// 投资者代码
 	TThostFtdcPasswordType	m_passwd;//密码
+	TThostFtdcProductInfoType	m_userProductInfo;//应用软件名称
+	TThostFtdcAuthCodeType	m_authCode;//认证密码
 
 
 	double m_closeProfit;//平仓盈亏，所有合约一起算后的值，另外在m_trade_message_map有单独计算每个合约的平仓盈亏值

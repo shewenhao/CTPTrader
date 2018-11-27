@@ -28,6 +28,8 @@ struct ReadMessage
 	TThostFtdcBrokerIDType	m_appId;//经纪公司代码
 	TThostFtdcUserIDType	m_userId;//用户名
 	TThostFtdcPasswordType	m_passwd;//密码
+	TThostFtdcProductInfoType	m_userProductInfo;
+	TThostFtdcAuthCodeType	m_authCode;
 
 	char m_mdFront[50];//行情服务器地址
 	char m_tradeFront[50];//交易服务器地址
@@ -179,9 +181,17 @@ void SetMessage(ReadMessage& readMessage, string *exePath, int *kdbPort, int *st
 	CString read_passwd;
 	GetPrivateProfileString("Account", "passwd", "passwd_error", read_passwd.GetBuffer(MAX_PATH), MAX_PATH, acountParampath.c_str());
 
+	CString read_userProductInfo;
+	GetPrivateProfileString("Account", "userproductinfo", "", read_userProductInfo.GetBuffer(MAX_PATH), MAX_PATH, acountParampath.c_str());
+
+	CString read_authCode;
+	GetPrivateProfileString("Account", "authcode", "", read_authCode.GetBuffer(MAX_PATH), MAX_PATH, acountParampath.c_str());
+
 	strcpy_s(readMessage.m_appId, read_brokerID);
 	strcpy_s(readMessage.m_userId, read_userId);
 	strcpy_s(readMessage.m_passwd, read_passwd);
+	strcpy_s(readMessage.m_userProductInfo, read_userProductInfo);
+	strcpy_s(readMessage.m_authCode, read_authCode);
 
 	//-------------------------------读取地址模块-------------------------------
 	CString read_MDAddress;

@@ -1,13 +1,37 @@
-﻿Build started 2018/11/27 12:35:01.
-     1>Project "D:\Coding_Applications\Codes\Github\CTPTrader\LogicalTrader\CTP期货交易系统_旗舰版\CTP期货交易系统_旗舰版.vcxproj" on node 2 (Build target(s)).
+﻿Build started 2018/11/27 20:16:40.
+     1>Project "D:\Coding_Applications\Codes\Github\CTPTrader\LogicalTrader\CTP期货交易系统_旗舰版\CTP期货交易系统_旗舰版.vcxproj" on node 2 (Rebuild target(s)).
      1>ClCompile:
-         D:\Coding_Applications\VisualStudio2013\VC\bin\CL.exe /c /Zi /nologo /W3 /WX- /O2 /Oi /Oy- /GL /D WIN32 /D NDEBUG /D _CONSOLE /D _MBCS /Gm- /EHsc /MTd /GS /Gy /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Release\\" /Fd"Release\vc120.pdb" /Gd /TP /analyze- /errorReport:prompt ctp.cpp
+         D:\Coding_Applications\VisualStudio2013\VC\bin\CL.exe /c /Zi /nologo /W3 /WX- /O2 /Oi /Oy- /GL /D WIN32 /D NDEBUG /D _CONSOLE /D _MBCS /Gm- /EHsc /MTd /GS /Gy /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Release\\" /Fd"Release\vc120.pdb" /Gd /TP /analyze- /errorReport:prompt ctp.cpp kdb_function.cpp Logger.cpp mdspi.cpp strategy.cpp StructFunction.cpp traderspi.cpp
          ctp.cpp
      1>D:\Coding_Applications\VisualStudio2013\VC\atlmfc\include\afx.h(38): warning C4996: 'MBCS_Support_Deprecated_In_MFC': MBCS support in MFC is deprecated and may be removed in a future version of MFC.
                  D:\Coding_Applications\VisualStudio2013\VC\atlmfc\include\afx.h(33) : see declaration of 'MBCS_Support_Deprecated_In_MFC'
          _WIN32_WINNT not defined. Defaulting to _WIN32_WINNT_MAXVER (see WinSDKVer.h)
-     1>d:\coding_applications\codes\github\ctptrader\logicaltrader\ctp期货交易系统_旗舰版\ctp.h(134): warning C4996: 'localtime': This function or variable may be unsafe. Consider using localtime_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+     1>d:\coding_applications\codes\github\ctptrader\logicaltrader\ctp期货交易系统_旗舰版\ctp.h(136): warning C4996: 'localtime': This function or variable may be unsafe. Consider using localtime_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
                  D:\Coding_Applications\VisualStudio2013\VC\include\time.inl(112) : see declaration of 'localtime'
+         kdb_function.cpp
+         Logger.cpp
+     1>Logger.cpp(126): warning C4996: 'ctime': This function or variable may be unsafe. Consider using ctime_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 D:\Coding_Applications\VisualStudio2013\VC\include\time.inl(86) : see declaration of 'ctime'
+         mdspi.cpp
+     1>D:\Coding_Applications\VisualStudio2013\VC\atlmfc\include\afx.h(38): warning C4996: 'MBCS_Support_Deprecated_In_MFC': MBCS support in MFC is deprecated and may be removed in a future version of MFC.
+                 D:\Coding_Applications\VisualStudio2013\VC\atlmfc\include\afx.h(33) : see declaration of 'MBCS_Support_Deprecated_In_MFC'
+         _WIN32_WINNT not defined. Defaulting to _WIN32_WINNT_MAXVER (see WinSDKVer.h)
+         strategy.cpp
+     1>strategy.cpp(131): warning C4244: '=' : conversion from 'J' to 'int', possible loss of data
+     1>strategy.cpp(161): warning C4244: '=' : conversion from 'J' to 'int', possible loss of data
+     1>strategy.cpp(174): warning C4244: '=' : conversion from 'J' to 'int', possible loss of data
+     1>strategy.cpp(408): warning C4244: '=' : conversion from 'J' to 'int', possible loss of data
+     1>strategy.cpp(426): warning C4244: '=' : conversion from 'J' to 'int', possible loss of data
+     1>strategy.cpp(539): warning C4244: '=' : conversion from 'J' to 'int', possible loss of data
+     1>strategy.cpp(571): warning C4996: 'localtime': This function or variable may be unsafe. Consider using localtime_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 D:\Coding_Applications\VisualStudio2013\VC\include\time.inl(112) : see declaration of 'localtime'
+         StructFunction.cpp
+     1>D:\Coding_Applications\VisualStudio2013\VC\atlmfc\include\afx.h(38): warning C4996: 'MBCS_Support_Deprecated_In_MFC': MBCS support in MFC is deprecated and may be removed in a future version of MFC.
+                 D:\Coding_Applications\VisualStudio2013\VC\atlmfc\include\afx.h(33) : see declaration of 'MBCS_Support_Deprecated_In_MFC'
+         _WIN32_WINNT not defined. Defaulting to _WIN32_WINNT_MAXVER (see WinSDKVer.h)
+         traderspi.cpp
+     1>traderspi.cpp(637): warning C4800: 'int' : forcing value to bool 'true' or 'false' (performance warning)
+     1>traderspi.cpp(1360): warning C4101: 'MDtime_last2' : unreferenced local variable
        Link:
          D:\Coding_Applications\VisualStudio2013\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"D:\Coding_Applications\Codes\Github\CTPTrader\LogicalTrader\Release\CTP期货交易系统_旗舰版.exe" /INCREMENTAL:NO /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"D:\Coding_Applications\Codes\Github\CTPTrader\LogicalTrader\Release\CTP期货交易系统_旗舰版.pdb" /SUBSYSTEM:CONSOLE /OPT:REF /OPT:ICF /LTCG /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"D:\Coding_Applications\Codes\Github\CTPTrader\LogicalTrader\Release\CTP期货交易系统_旗舰版.lib" /MACHINE:X86 /SAFESEH Release\ctp.obj
          Release\kdb_function.obj
@@ -22,8 +46,8 @@
          Generating code
          Finished generating code
          CTP期货交易系统_旗舰版.vcxproj -> D:\Coding_Applications\Codes\Github\CTPTrader\LogicalTrader\Release\CTP期货交易系统_旗舰版.exe
-     1>Done Building Project "D:\Coding_Applications\Codes\Github\CTPTrader\LogicalTrader\CTP期货交易系统_旗舰版\CTP期货交易系统_旗舰版.vcxproj" (Build target(s)).
+     1>Done Building Project "D:\Coding_Applications\Codes\Github\CTPTrader\LogicalTrader\CTP期货交易系统_旗舰版\CTP期货交易系统_旗舰版.vcxproj" (Rebuild target(s)).
 
 Build succeeded.
 
-Time Elapsed 00:00:09.64
+Time Elapsed 00:00:25.98

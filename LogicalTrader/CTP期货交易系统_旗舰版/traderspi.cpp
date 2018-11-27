@@ -37,14 +37,49 @@ void CtpTraderSpi::OnFrontConnected()
 	//配置品种开平规则
 	define_TThostFtdcCombOffsetFlagType();
 
-	//登录期货账号
-	ReqUserLogin(m_appId, m_userId, m_passwd);
+	if (strlen(m_userProductInfo) > 2)
+	{
+		//期货公司认证
+		ReqAuthenticate(m_appId, m_userId, m_userProductInfo, m_authCode);
+		//ReqAuthenticate("", "", m_userProductInfo, "");
+	}	
+	else
+	{
+		//登录期货账号
+		ReqUserLogin(m_appId, m_userId, m_passwd);
+	}
+	
 
 	SetEvent(g_hEvent);
 }
 
 
+void CtpTraderSpi::ReqAuthenticate(TThostFtdcBrokerIDType	BrokerID, TThostFtdcUserIDType	UserID, TThostFtdcProductInfoType	UserProductInfo, TThostFtdcAuthCodeType	AuthCode)
+{
+	CThostFtdcReqAuthenticateField req;
+	memset(&req, 0, sizeof(req));
+	strcpy(req.BrokerID, BrokerID);
+	strcpy(req.UserID, UserID);
+	strcpy(req.UserProductInfo, UserProductInfo);
+	strcpy(req.AuthCode, AuthCode);
+	int ret = m_pUserApi_td->ReqAuthenticate(&req, ++requestId);
 
+	cerr << "Trader 请求 | 发送认证..." << ((ret == 0) ? "成功" : "失败") << endl;
+}
+
+void CtpTraderSpi::OnRspAuthenticate(CThostFtdcRspAuthenticateField *pRspAuthenticateField, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+{
+	if (pRspInfo != NULL)
+	{
+		if (pRspInfo->ErrorID == 0) // 认证通过
+		{
+			ReqUserLogin(m_appId, m_userId, m_passwd);
+		}
+		else
+		{  // 认证错误处理，做相应记录、提示
+		}
+	}
+}
 
 void CtpTraderSpi::ReqUserLogin(TThostFtdcBrokerIDType	vAppId,
 	TThostFtdcUserIDType	vUserId,	TThostFtdcPasswordType	vPasswd)
@@ -54,6 +89,10 @@ void CtpTraderSpi::ReqUserLogin(TThostFtdcBrokerIDType	vAppId,
 	strcpy(req.BrokerID, vAppId); 
 	strcpy(req.UserID, vUserId);  
 	strcpy(req.Password, vPasswd);
+	if (strlen(m_userProductInfo) > 2)
+	{
+		strcpy(req.UserProductInfo, m_userProductInfo);
+	}
 	int ret = m_pUserApi_td->ReqUserLogin(&req, ++requestId);
 	cerr<<"Trader 请求 | 发送登录..."<<((ret == 0) ? "成功" :"失败") << endl;	
 }
@@ -1298,11 +1337,13 @@ void CtpTraderSpi::OnRspQryOrder(CThostFtdcOrderField *pOrder, CThostFtdcRspInfo
 
 
 
-void CtpTraderSpi::setAccount(TThostFtdcBrokerIDType	appId,	TThostFtdcUserIDType	userId,	TThostFtdcPasswordType	passwd)
+void CtpTraderSpi::setAccount(TThostFtdcBrokerIDType	appId, TThostFtdcUserIDType	userId, TThostFtdcPasswordType	passwd, TThostFtdcProductInfoType	userProductInfo, TThostFtdcAuthCodeType	authCode)
 {
 	strcpy(m_appId, appId);
 	strcpy(m_userId, userId);
 	strcpy(m_passwd, passwd);
+	strcpy(m_userProductInfo, userProductInfo);
+	strcpy(m_authCode, authCode);
 
 }
 
