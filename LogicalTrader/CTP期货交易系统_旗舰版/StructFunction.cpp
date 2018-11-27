@@ -101,3 +101,8 @@ string String_StripNum(string s)
 	s.erase(remove_if(s.begin(), s.end(), [](char c) { return !isalpha(c); }), s.end());
 	return s;
 }
+
+int UpdateTime_Int(const string time)
+{
+	return atoi(time.substr(0, 2).c_str()) * 3600 + atoi(time.substr(3, 2).c_str()) * 60 + atoi(time.substr(6, 2).c_str());
+}

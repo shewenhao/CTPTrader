@@ -108,7 +108,7 @@ string replaceAll(std::string& str, const std::string& from, const std::string& 
 
 void kdbSetData()
 {
-	kdbConnectorSetGet.sync("Quote:-500000#select from Quote;");
+	kdbConnectorSetGet.sync("Quote:-500000#select from Quote;"); ////tempQuote:select by ReceiveDate.date, 1 xbar ReceiveDate.second, Symbol from Quote;delete date, second from `tempQuote;Quote: select Date, ReceiveDate, Symbol, BidPrice1, BidVol1, AskPrice1, AskVol1 from tempQuote; 
 	kdbConnectorSetGet.sync("delete from `Quote where Date.minute > 02:30:00, Date.minute <= 09:00:00;delete from `Quote where Date.minute > 11:30:00, Date.minute < 13:00:00;delete from `Quote where Date.minute > 15:15:00, Date.minute < 21:00:00;");
 	kdbConnectorSetGet.sync(kdbDataQuoteSetPath.c_str());
 	//g_strategy->DataRebootDADataSource();
@@ -171,10 +171,10 @@ void SetMessage(ReadMessage& readMessage, string *exePath, int *kdbPort, int *st
 
 	//-------------------------------¶ÁÈ¡ÕËºÅÄ£¿é-------------------------------
 	CString read_brokerID;
-	GetPrivateProfileString("Account", "brokerID", "brokerID_error", read_brokerID.GetBuffer(MAX_PATH), MAX_PATH, acountParampath.c_str());
+	GetPrivateProfileString("Account", "brokerid", "brokerID_error", read_brokerID.GetBuffer(MAX_PATH), MAX_PATH, acountParampath.c_str());
 	
 	CString read_userId;
-	GetPrivateProfileString("Account", "userId", "userId_error", read_userId.GetBuffer(MAX_PATH), MAX_PATH, acountParampath.c_str());
+	GetPrivateProfileString("Account", "userid", "userId_error", read_userId.GetBuffer(MAX_PATH), MAX_PATH, acountParampath.c_str());
 
 	CString read_passwd;
 	GetPrivateProfileString("Account", "passwd", "passwd_error", read_passwd.GetBuffer(MAX_PATH), MAX_PATH, acountParampath.c_str());

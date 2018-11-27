@@ -129,10 +129,9 @@ struct History_data
 //读取历史K线
 void ReadDatas(string fileName, vector<History_data> &history_data_vec);
 
-
-
 int Store_fileName(string path, vector<string> &FileName);
 
 string String_StripNum(string);
 
+int UpdateTime_Int(const string time);
 #endif

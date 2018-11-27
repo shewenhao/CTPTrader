@@ -30,10 +30,6 @@ int IndexFuturePositionLimit = 20;
 CThostFtdcDepthMarketDataField *pDepthMarketDataTD;
 
 
-
-
-
-
 void CtpTraderSpi::OnFrontConnected()
 {
 	cerr<<"Trader Init()调用成功"<<"Trader 连接交易前置...成功"<<endl;
@@ -46,6 +42,9 @@ void CtpTraderSpi::OnFrontConnected()
 
 	SetEvent(g_hEvent);
 }
+
+
+
 
 void CtpTraderSpi::ReqUserLogin(TThostFtdcBrokerIDType	vAppId,
 	TThostFtdcUserIDType	vUserId,	TThostFtdcPasswordType	vPasswd)
@@ -1246,16 +1245,30 @@ void CtpTraderSpi::OnRspQryOrder(CThostFtdcOrderField *pOrder, CThostFtdcRspInfo
 				cerr<<"所有合约报单次数："<<orderList.size()<<endl;
 
 				cerr<<"--------------------------------------------------------------------报单start"<<endl;
-				for(vector<CThostFtdcOrderField*>::iterator iter = orderList.begin(); iter != orderList.end(); iter++)
-					cerr<<"经纪公司代码:"<<(*iter)->BrokerID<<endl<<" 投资者代码:"<<(*iter)->InvestorID<<endl<<" 用户代码:"<<(*iter)->UserID<<endl<<" 合约代码:"<<(*iter)->InstrumentID<<endl<<" 买卖方向:"<<(*iter)->Direction<<endl
-					<<" 组合开平标志:"<<(*iter)->CombOffsetFlag<<endl<<" 价格:"<<(*iter)->LimitPrice<<endl<<" 数量:"<<(*iter)->VolumeTotalOriginal<<endl<<" 报单引用:"<< (*iter)->OrderRef<<endl<<" 客户代码:"<<(*iter)->ClientID<<endl
-					<<" 报单状态:"<<(*iter)->OrderStatus<<endl<<" 委托时间:"<<(*iter)->InsertTime<<endl<<" 报单编号:"<<(*iter)->OrderSysID<<endl<<" GTD日期:"<<(*iter)->GTDDate<<endl<<" 交易日:"<<(*iter)->TradingDay<<endl
-					<<" 报单日期:"<<(*iter)->InsertDate<<endl
-					<<endl;
+				for (vector<CThostFtdcOrderField*>::iterator iter = orderList.begin(); iter != orderList.end(); iter++)
+				{
+					if ((*iter)->OrderStatus == '3' || (*iter)->OrderStatus == '1')
+					{
+						cerr << "经纪公司代码:" << (*iter)->BrokerID << endl << " 投资者代码:" << (*iter)->InvestorID << endl << " 用户代码:" << (*iter)->UserID << endl << " 合约代码:" << (*iter)->InstrumentID << endl << " 买卖方向:" << (*iter)->Direction << endl
+							<< " 组合开平标志:" << (*iter)->CombOffsetFlag << endl << " 价格:" << (*iter)->LimitPrice << endl << " 数量:" << (*iter)->VolumeTotalOriginal << endl << " 报单引用:" << (*iter)->OrderRef << endl << " 客户代码:" << (*iter)->ClientID << endl
+							<< " 报单状态:" << (*iter)->OrderStatus << endl << " 委托时间:" << (*iter)->InsertTime << endl << " 报单编号:" << (*iter)->OrderSysID << endl << " GTD日期:" << (*iter)->GTDDate << endl << " 交易日:" << (*iter)->TradingDay << endl
+							<< " 报单日期:" << (*iter)->InsertDate << endl
+							<< endl;
 
-				cerr<<"--------------------------------------------------------------------报单end"<<endl;
+						cerr << "--------------------------------------------------------------------报单end" << endl;
+						ReqOrderAction((*iter)->BrokerOrderSeq);
+					}
 
+				}
+				
 
+				for (vector<CThostFtdcOrderField*>::iterator iter = orderList.begin(); iter != orderList.end(); iter++)//倒序遍历，break
+				{
+					if ((*iter)->OrderStatus == '3' || (*iter)->OrderStatus == '1')//未成交还在队列中,部分成交还在队列中
+					{
+						ReqOrderAction((*iter)->BrokerOrderSeq);
+					}
+				}
 				Sleep(1000);
 				cerr<<"查询报单正常，首次查询成交:"<<endl;
 				ReqQryTrade();
@@ -1300,9 +1313,11 @@ void CtpTraderSpi::setAccount(TThostFtdcBrokerIDType	appId,	TThostFtdcUserIDType
 void CtpTraderSpi::MaintainOrder(const string& MDtime, double MDprice, string maintainMode, int *m_LastedVolume, TThostFtdcInstrumentIDType instId)
 {
 	string InsertTime_str;
+	int InsertTime_int;
 	double TargetPrice;
 	double SetPrice;
 	int MDtime_last2;
+	int MDtime_int;
 
 	if (orderList.size() > 0)
 	{
@@ -1329,15 +1344,13 @@ void CtpTraderSpi::MaintainOrder(const string& MDtime, double MDprice, string ma
 						else
 						{
 							CheckOrderPosition((*iter)->InstrumentID, (*iter)->Direction, pDepthMarketDataTD->AskPrice1, pDepthMarketDataTD->BidPrice1, &TargetPrice, m_frontsessionref_ordertype[to_string(frontId) + to_string(sessionId) + strOrderRef], pDepthMarketDataTD);
-							InsertTime_str = (*iter)->InsertTime;//委托时间"21:47:01"
+							int OrderAdjustSecond = m_frontsessionref_ordertype[to_string(frontId) + to_string(sessionId) + strOrderRef][2];
+							int OrderAdjustDistance = m_frontsessionref_ordertype[to_string(frontId) + to_string(sessionId) + strOrderRef][3];
+							double OrderPriceTick = m_instMessage_map[instId]->PriceTick;
+							InsertTime_int = UpdateTime_Int((*iter)->InsertTime);
+							MDtime_int = UpdateTime_Int(MDtime);
 
-							MDtime_last2 = atoi(MDtime.substr(6, 2).c_str());
-
-							if (MDtime_last2 < atoi(InsertTime_str.substr(6, 2).c_str()))//行情时间最后两位小于委托时间的最后两位
-								MDtime_last2 += 60;//行情时间加60秒
-
-							int OrderAdjustMode = m_frontsessionref_ordertype[to_string(frontId) + to_string(sessionId) + strOrderRef][2];
-							if (MDtime_last2 - atoi(InsertTime_str.substr(6, 2).c_str()) >= OrderAdjustMode && SetPrice != TargetPrice)//委托大于该订单规定的秒数未成交
+							if (MDtime_int - InsertTime_int >= OrderAdjustSecond && abs(SetPrice - TargetPrice) >= OrderPriceTick * OrderAdjustDistance)//委托大于该订单规定的秒数未成交
 							{
 								cerr << "撤单:" << endl;
 								//撤单
@@ -1377,6 +1390,29 @@ void CtpTraderSpi::MaintainOrder(const string& MDtime, double MDprice, string ma
 					}
 				}
 			}
+		}
+	}
+	else if (maintainMode == "CancelInstrumentIDOrder")
+	{
+		for (vector<CThostFtdcOrderField*>::iterator iter = orderList.begin(); iter != orderList.end(); iter++)//倒序遍历，break
+		{
+			if ((*iter)->OrderStatus == '3' || (*iter)->OrderStatus == '1')//未成交还在队列中,部分成交还在队列中
+			{
+				if ((*iter)->FrontID == frontId && (*iter)->SessionID == sessionId)
+				{
+					string strOrderRef = (*iter)->OrderRef;
+					SetPrice = (*iter)->LimitPrice;
+					if (m_frontsessionref_frontsessionref.find(to_string(frontId) + to_string(sessionId) + strOrderRef) == m_frontsessionref_frontsessionref.end())
+					{
+							m_brokerorderseq_canceltype.insert(pair<int, char>((*iter)->BrokerOrderSeq, '0'));
+							ReqOrderAction((*iter)->BrokerOrderSeq);
+					}
+				}
+			}
+		}
+		if (!(m_twap_message_map.find(instId) == m_twap_message_map.end()))
+		{
+			m_twap_message_map.erase(instId);
 		}
 	}
 }
@@ -2100,11 +2136,12 @@ void CtpTraderSpi::Twap_Prep(TThostFtdcInstrumentIDType instId, string order_typ
 	}*/
 
 	string string_instId = instId;
+	//如果map中有相关的品种的执行任务，则去除
 	if (!(m_twap_message_map.find(string_instId) == m_twap_message_map.end()))
 	{
 		m_twap_message_map.erase(string_instId);
 	}
-	
+	//加入新的队列任务
 	m_twap_message_map.insert(pair<string, twap_message*> (twap_message_p->instId, twap_message_p));
 	if (m_instId_executed_volume.find(twap_message_p->instId) == m_instId_executed_volume.end())
 	{
