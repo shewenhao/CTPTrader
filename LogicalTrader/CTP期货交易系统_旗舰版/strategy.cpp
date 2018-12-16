@@ -8,7 +8,7 @@ using namespace std;
 using namespace kdb;
  
 kdb::Connector kdbConnector;
-int m_kdbQuotePort = 5004;
+int m_kdbQuotePort = 5005;
 string m_kdbScript;
 int m_ShortLongInitNum = 0;
 int m_ReadShortLongInitNum = 0;
@@ -47,8 +47,21 @@ void Strategy::OnTickData(CThostFtdcDepthMarketDataField *pDepthMarketData)
 
 		if (m_StrategyType == "Quote")
 		{
+			TDSpi_stgy->Set_CThostFtdcDepthMarketDataField(pDepthMarketData);
+			Set_CThostFtdcDepthMarketDataField(pDepthMarketData);
 			//Insert Data To KDB+ DataBase
 			DataInsertToKDB(pDepthMarketData);
+			string currentInstrumentId = pDepthMarketData->InstrumentID;
+			if (TDSpi_stgy->CheckSameProduct_CThostFtdcDepthMarketDataField(currentInstrumentId) == 3)
+			{
+				vector<string> v_product = TDSpi_stgy->Data3MContracts(currentInstrumentId);
+				Data3MInsertToKDB(v_product, pDepthMarketData, 123456789101112);
+			}	
+			if (TDSpi_stgy->CheckSameProduct_CThostFtdcDepthMarketDataField(currentInstrumentId) == 2)
+			{
+				vector<string> v_product = TDSpi_stgy->Data3MContracts(currentInstrumentId);
+				Data3MInsertToKDB(v_product, pDepthMarketData, 159);
+			}
 			//Reboost DA Data Source
 			if (n_quote == 0)
 			{
@@ -100,9 +113,17 @@ void Strategy::OnTickData(CThostFtdcDepthMarketDataField *pDepthMarketData)
 }
 
 //设置交易的合约代码
-void Strategy::Init(string strategyType, string instId, string exePath, int kdbPort, string kdbScrpit, int strategyVolumeTarget, string strategykdbscript, double par1, double par2, double par3, double par4, double par5, double par6, int strategyOrderType1, int strategyOrderType2, int strategyOrderType3, int strategyOrderType4, int strategyOrderType5, int strategyOrderType6, string strategyPairLeg1Symbol, string strategyPairLeg2Symbol, string strategyPairLeg3Symbol)
+void Strategy::Init(string strategyType, string instIddecoration, string instId, string exePath, int kdbPort, string kdbScrpit, int strategyVolumeTarget, string strategykdbscript, double par1, double par2, double par3, double par4, double par5, double par6, int strategyOrderType1, int strategyOrderType2, int strategyOrderType3, int strategyOrderType4, int strategyOrderType5, int strategyOrderType6, string strategyPairLeg1Symbol, string strategyPairLeg2Symbol, string strategyPairLeg3Symbol)
 {
+	vector<string> instIdDecorationList;
+	vector<string> instIdList;
+	SplitString(instIddecoration, instIdDecorationList, ",");
+	SplitString(instId, instIdList, ",");
 	m_exePath = exePath.append("\\Bats\\DAReboot.bat");
+	for (vector<string>::size_type i = 0; i != instIdDecorationList.size(); ++i)
+	{
+		m_instIddecoration_instId.insert(pair<string, string>(instIdDecorationList[i], instIdList[i]));
+	}
 	m_StrategyType = strategyType;
 	orderType[0] = strategyOrderType1;
 	orderType[1] = strategyOrderType2;
@@ -111,6 +132,7 @@ void Strategy::Init(string strategyType, string instId, string exePath, int kdbP
 	orderType[4] = strategyOrderType5;
 	orderType[5] = strategyOrderType6;
 	strcpy_s(m_instId, instId.c_str());
+	strcpy_s(m_instIddecoration, instIddecoration.c_str());
 	kdbConnector.connect("localhost", kdbPort);
 	m_kdbScript = strategykdbscript;
 	m_VolumeTarget = strategyVolumeTarget;
@@ -118,7 +140,7 @@ void Strategy::Init(string strategyType, string instId, string exePath, int kdbP
 	string kdb_init_string = "h:hopen `::";
 	kdb_init_string.append(to_string(m_kdbQuotePort));
 	kdb_init_string.append(";PairFormula:{(x%y)};f:{x%y};bollingerBands: {[k;n;data]      movingAvg: mavg[n;data];    md: sqrt mavg[n;data*data]-movingAvg*movingAvg;      movingAvg+/:(k*-1 0 1)*\\:md};ReceiveTimeToDate:{(\"\"z\"\" $ 1970.01.01+ floor x %86400000000 )+ 08:00:00.000 +\"\"j\"\"$ 0.001* x mod  86400000000};isTable:{if[98h=type x;:1b];if[99h=type x;:98h=type key x];0b};isTable2: {@[{isTable value x}; x; 0b]};");
-	kdbConnector.sync(kdb_init_string.c_str());
+	//kdbConnector.sync(kdb_init_string.c_str());
 	kdbConnector.sync(kdb_par_string.c_str());
 	m_kdbScript = kdbScrpit + m_kdbScript;
 	////////////////////////////////////////////////////
@@ -503,6 +525,7 @@ void Strategy::DataInsertToKDB(CThostFtdcDepthMarketDataField *pDepthMarketData)
 	string datesplit = "D";
 	string time = pDepthMarketData->UpdateTime;
 	string receivedate = return_current_time_and_date();
+	date = receivedate.substr(0, 10);
 	string symbol = pDepthMarketData->InstrumentID;
 	double bidPrice1 = pDepthMarketData->BidPrice1;
 	int    bidvol1 = 1;
@@ -510,9 +533,7 @@ void Strategy::DataInsertToKDB(CThostFtdcDepthMarketDataField *pDepthMarketData)
 	int    askvol1 = 1;
 
 	insertstring.append("`Quote insert (");
-	insertstring.append(date.substr(0, 4) + ".");
-	insertstring.append(date.substr(4, 2) + ".");
-	insertstring.append(date.substr(6, 2));
+	insertstring.append(date);
 	insertstring.append(datesplit);
 	insertstring.append(time);
 	insertstring.append(";");
@@ -531,6 +552,100 @@ void Strategy::DataInsertToKDB(CThostFtdcDepthMarketDataField *pDepthMarketData)
 	insertstring.append(")");
 	
 	kdbConnector.sync(insertstring.c_str());
+}
+
+void Strategy::Data3MInsertToKDB(vector<string> v_product, CThostFtdcDepthMarketDataField *pDepthMarketData, int mode)
+{
+	if (mode == 123456789101112)
+	{
+		string insertstring;
+		string date = pDepthMarketData->TradingDay;
+		string datesplit = "D";
+		string time = pDepthMarketData->UpdateTime;
+		string receivedate = return_current_time_and_date();
+		date = receivedate.substr(0, 10);
+		string symbol = String_StripNum(pDepthMarketData->InstrumentID);
+		string product = String_StripNum(pDepthMarketData->InstrumentID);
+		symbol.append("3M");
+		string symbolCON1 = product + "CON1";
+		string symbolCON2 = product + "CON2";
+		string symbolCON3 = product + "CON3";
+		double bidPrice1 = 1.0;
+		int    bidvol1 = 1;
+		double askPrice1 = 1.0;
+		int    askvol1 = 1;
+		int monthdate = stoi(date.substr(8, 2));
+		double bidpricecon1 = m_pMarketData_map[m_instIddecoration_instId[symbolCON1]]->bidprice1;
+		double bidpricecon2 = m_pMarketData_map[m_instIddecoration_instId[symbolCON2]]->bidprice1;
+		double bidpricecon3 = m_pMarketData_map[m_instIddecoration_instId[symbolCON3]]->bidprice1;
+		double askpricecon1 = m_pMarketData_map[m_instIddecoration_instId[symbolCON1]]->askprice1;
+		double askpricecon2 = m_pMarketData_map[m_instIddecoration_instId[symbolCON2]]->askprice1;
+		double askpricecon3 = m_pMarketData_map[m_instIddecoration_instId[symbolCON3]]->askprice1;
+		if (monthdate < 8)
+		{
+			bidPrice1 = bidpricecon2 + ((15 + monthdate) / 30.0)*(bidpricecon3 - bidpricecon2);
+			askPrice1 = askpricecon2 + ((15 + monthdate) / 30.0)*(askpricecon3 - askpricecon2);
+		}
+		else if (monthdate >= 8 && monthdate <= 15)
+		{
+			bidPrice1 = bidpricecon1 + ((15 + monthdate) / 30.0)*(bidpricecon2 - bidpricecon1);
+			askPrice1 = askpricecon1 + ((15 + monthdate) / 30.0)*(askpricecon2 - askpricecon1);
+		}
+		else if (monthdate > 15)
+		{
+			bidPrice1 = bidpricecon2 + ((monthdate - 15) / 30.0)*(bidpricecon3 - bidpricecon2);
+			askPrice1 = askpricecon2 + ((monthdate - 15) / 30.0)*(askpricecon3 - askpricecon2);
+		}
+
+
+
+		insertstring.append("`Quote insert (");
+		insertstring.append(date);
+		insertstring.append(datesplit);
+		insertstring.append(time);
+		insertstring.append(";");
+		insertstring.append(receivedate);
+		insertstring.append(";");
+		insertstring.append("`");
+		insertstring.append(symbol);
+		insertstring.append(";");
+		insertstring.append(to_string(bidPrice1));
+		insertstring.append(";");
+		insertstring.append(to_string(bidvol1));
+		insertstring.append(";");
+		insertstring.append(to_string(askPrice1));
+		insertstring.append(";");
+		insertstring.append(to_string(askvol1));
+		insertstring.append(")");
+
+		kdbConnector.sync(insertstring.c_str());
+	}
+	
+	if (mode == 159)
+	{
+
+	}
+}
+
+void Strategy::Set_CThostFtdcDepthMarketDataField(CThostFtdcDepthMarketDataField *pDepthMarketData)
+{
+	if (m_pMarketData_map.find(pDepthMarketData->InstrumentID) == m_pMarketData_map.end())
+	{
+		pMarketData_message* m_pMarketData_map_p = new pMarketData_message();
+		m_pMarketData_map_p->instId = pDepthMarketData->InstrumentID;
+		m_pMarketData_map_p->askprice1 = pDepthMarketData->AskPrice1;
+		m_pMarketData_map_p->bidprice1 = pDepthMarketData->BidPrice1;
+		m_pMarketData_map_p->vol = pDepthMarketData->Volume;
+
+		m_pMarketData_map.insert(pair<string, pMarketData_message*>(pDepthMarketData->InstrumentID, m_pMarketData_map_p));
+	}
+	else
+	{
+		m_pMarketData_map[pDepthMarketData->InstrumentID]->instId = pDepthMarketData->InstrumentID;
+		m_pMarketData_map[pDepthMarketData->InstrumentID]->askprice1 = pDepthMarketData->AskPrice1;
+		m_pMarketData_map[pDepthMarketData->InstrumentID]->bidprice1 = pDepthMarketData->BidPrice1;
+		m_pMarketData_map[pDepthMarketData->InstrumentID]->vol = pDepthMarketData->Volume;
+	}
 }
 
 void Strategy::DataRebootDADataSource()
@@ -559,8 +674,6 @@ bool Strategy::IsMarketOpen(CThostFtdcDepthMarketDataField *pDepthMarketData)
 		return false;
 	}
 }
-
-
 
 string  Strategy::return_current_time_and_date()
 {

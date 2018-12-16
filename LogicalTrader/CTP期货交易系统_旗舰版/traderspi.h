@@ -83,6 +83,8 @@ public:
 	//市场行情通知
 	virtual void CtpTraderSpi::Set_CThostFtdcDepthMarketDataField(CThostFtdcDepthMarketDataField *pDepthMarketData);
 
+	virtual int CtpTraderSpi::CheckSameProduct_CThostFtdcDepthMarketDataField(string instId);
+
 	//twap准备
 	virtual void Twap_Prep(TThostFtdcInstrumentIDType    instId, string order_type, TThostFtdcDirectionType dir, TThostFtdcCombOffsetFlagType * kpp, TThostFtdcPriceType askprice, TThostFtdcPriceType bidprice, TThostFtdcPriceType price, TThostFtdcVolumeType vol, vector<int> orderType, CThostFtdcDepthMarketDataField *pDepthMarketData);
 
@@ -216,7 +218,10 @@ public:
 	//返回品种开平规则
 	string Send_TThostFtdcCombOffsetFlagType(string instID);
 
-	
+	//3M存数据到kdb
+	vector<string> Data3MContracts(string instId);
+
+	vector<double> get_pMarketDataMap(string instId);
 	
 private:
 	

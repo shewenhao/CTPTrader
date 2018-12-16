@@ -6,6 +6,11 @@
 #include "strategy.h"
 #include <fstream>
 #include "Logger.h"
+#include <iostream>     // std::cout
+#include <algorithm>    // std::sort
+#include <vector>       // std::vector
+#include <string>
+
 
 using namespace std;
 using namespace CPlusPlusLogging;
@@ -2144,6 +2149,52 @@ void CtpTraderSpi::Set_CThostFtdcDepthMarketDataField(CThostFtdcDepthMarketDataF
 	}
 }
 
+int CtpTraderSpi::CheckSameProduct_CThostFtdcDepthMarketDataField(string instId)
+{
+	string product = String_StripNum(instId);
+	int count = 0;
+	map<string, pMarketData_message*>::iterator it;
+
+	for (it = m_pMarketData_message_map.begin(); it != m_pMarketData_message_map.end(); it++)
+	{
+		string currentProduct = String_StripNum(it->first);
+		string month = String_StripChar(it->first);
+		if (product.compare(currentProduct) == 0)
+		{
+			count++;
+		}
+	}
+	return count;
+}
+
+vector<string> CtpTraderSpi::Data3MContracts(string instId)
+{
+	string product = String_StripNum(instId);
+	map<string, pMarketData_message*>::iterator it;
+	int count = 0;
+	vector<string> v_product;
+	for (it = m_pMarketData_message_map.begin(); it != m_pMarketData_message_map.end(); it++)
+	{
+		string currentProduct = String_StripNum(it->first);
+		string month = String_StripChar(it->first);
+		if (product.compare(currentProduct) == 0)
+		{
+			v_product.push_back(it->first);
+			count++;
+		}
+	}
+	std::sort(v_product.begin(), v_product.begin() + count);
+	return v_product;
+}
+
+vector<double> CtpTraderSpi::get_pMarketDataMap(string instId)
+{
+	vector<double> v_askbid;
+	v_askbid.push_back(m_pMarketData_message_map[instId]->askprice1);
+	v_askbid.push_back(m_pMarketData_message_map[instId]->bidprice1);
+	return v_askbid;
+}
+
 bool CtpTraderSpi::FindinstIdMarketDataField(TThostFtdcInstrumentIDType instId)
 {
 	if (m_pMarketData_message_map.find(instId) == m_pMarketData_message_map.end())
@@ -2200,6 +2251,8 @@ void CtpTraderSpi::Twap_Prep(TThostFtdcInstrumentIDType instId, string order_typ
 	//m_target_volume_currentround = twap_message_p->orderType[4];
 	SendOrderDecoration(instId, order_type, dir, kpp, askprice, bidprice, price, min(vol, twap_message_p->orderType[4]), orderType, pDepthMarketData);
 }
+
+
 
 void CtpTraderSpi::SendOrderDecoration(TThostFtdcInstrumentIDType instId, string order_type, TThostFtdcDirectionType dir, TThostFtdcCombOffsetFlagType * kpp, TThostFtdcPriceType askprice, TThostFtdcPriceType bidprice, TThostFtdcPriceType price, TThostFtdcVolumeType vol, vector<int> orderType, CThostFtdcDepthMarketDataField *pDepthMarketData)
 {

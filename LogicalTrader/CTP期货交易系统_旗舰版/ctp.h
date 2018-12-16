@@ -12,6 +12,7 @@
 #include <iomanip>
 #include <vector>
 #include <fstream>
+#include "StructFunction.h"
 #ifndef KXVER
 #define KXVER 3
 #include "k.h"
@@ -36,6 +37,9 @@ struct ReadMessage
 
 	string m_read_contract;//合约代码
 
+	string m_read_contractdecoration;//合约代码
+
+	int m_quote_kdbPort;
 	int m_kdbPort;
 
 	string m_strategy_strategytype = "";
@@ -89,24 +93,24 @@ string ExePath() {
 	return string(buffer).substr(0, pos);
 }
 
-string replace(std::string& str, const std::string& from, const std::string& to) {
-	size_t start_pos = str.find(from);
-	if (start_pos == std::string::npos)
-		return false;
-	str.replace(start_pos, from.length(), to);
-	return str;
-}
+//string replace(std::string& str, const std::string& from, const std::string& to) {
+//	size_t start_pos = str.find(from);
+//	if (start_pos == std::string::npos)
+//		return false;
+//	str.replace(start_pos, from.length(), to);
+//	return str;
+//}
 
-string replaceAll(std::string& str, const std::string& from, const std::string& to) {
-	if (from.empty())
-		return str;
-	size_t start_pos = 0;
-	while ((start_pos = str.find(from, start_pos)) != std::string::npos) {
-		str.replace(start_pos, from.length(), to);
-		start_pos += to.length(); // In case 'to' contains 'from', like replacing 'x' with 'yx'
-	}
-	return str;
-}
+//string replaceAll(std::string& str, const std::string& from, const std::string& to) {
+//	if (from.empty())
+//		return str;
+//	size_t start_pos = 0;
+//	while ((start_pos = str.find(from, start_pos)) != std::string::npos) {
+//		str.replace(start_pos, from.length(), to);
+//		start_pos += to.length(); // In case 'to' contains 'from', like replacing 'x' with 'yx'
+//	}
+//	return str;
+//}
 
 void kdbSetData()
 {
@@ -155,7 +159,7 @@ string return_current_time_and_date1()
 	return (ss.str()).append(".").append(to_string(milliseconds.count()));
 }
 
-void SetMessage(ReadMessage& readMessage, string *exePath, int *kdbPort, int *strategyVolumeTarget, string *strategykdbscript, double *par1, double *par2, double *par3, double *par4, double *par5, double *par6, int *strategy_orderType1, int *strategy_orderType2, int *strategy_orderType3, int *strategy_orderType4, int *strategy_orderType5, int *strategy_orderType6, string strategyAccountParampath, string *strategyPairLeg1Symbol, string *strategyPairLeg2Symbol, string *strategyPairLeg3Symbol)//要用引用
+void SetMessage(ReadMessage& readMessage, string *exePath, int *m_quote_kdbPort, int *kdbPort, int *strategyVolumeTarget, string *strategykdbscript, double *par1, double *par2, double *par3, double *par4, double *par5, double *par6, int *strategy_orderType1, int *strategy_orderType2, int *strategy_orderType3, int *strategy_orderType4, int *strategy_orderType5, int *strategy_orderType6, string strategyAccountParampath, string *strategyPairLeg1Symbol, string *strategyPairLeg2Symbol, string *strategyPairLeg3Symbol)//要用引用
 {
 	kdbDataSetPath = ExePath();
 	*exePath = kdbDataSetPath;
@@ -204,12 +208,23 @@ void SetMessage(ReadMessage& readMessage, string *exePath, int *kdbPort, int *st
 	strcpy_s(readMessage.m_tradeFront, read_TDAddress);
 	
 	//-------------------------------设置合约模块-------------------------------
+	CString read_contractdecoration;
+	GetPrivateProfileString("Contract", "contractdecoration", "contractdecoration_error", read_contractdecoration.GetBuffer(MAX_PATH), MAX_PATH, acountParampath.c_str());
+
+	readMessage.m_read_contractdecoration = (LPCTSTR)read_contractdecoration;
+
 	CString read_contract;
 	GetPrivateProfileString("Contract", "contract", "contract_error", read_contract.GetBuffer(MAX_PATH), MAX_PATH, acountParampath.c_str());
 	
 	readMessage.m_read_contract = (LPCTSTR)read_contract;
 
 	//-------------------------------读取kdb模块-------------------------------
+	CString read_m_kdbPort;
+	GetPrivateProfileString("DataBaseAddress", "kdbPort", "kdbPort_error", read_m_kdbPort.GetBuffer(MAX_PATH), MAX_PATH, acountParampath.c_str());
+	readMessage.m_quote_kdbPort = atoi(read_m_kdbPort);
+	*m_quote_kdbPort = atoi(read_m_kdbPort);
+	//kdbConnectorSetGet.connect("localhost", *kdbPort);
+
 	CString read_kdbPort;
 	GetPrivateProfileString("DataBaseAddress", "kdbPort", "kdbPort_error", read_kdbPort.GetBuffer(MAX_PATH), MAX_PATH, acountParampath.c_str());
 	readMessage.m_kdbPort = atoi(read_kdbPort);

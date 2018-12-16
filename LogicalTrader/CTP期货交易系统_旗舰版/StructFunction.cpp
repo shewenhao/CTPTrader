@@ -102,7 +102,59 @@ string String_StripNum(string s)
 	return s;
 }
 
+string String_StripChar(string s)
+{
+	s.erase(std::remove(s.begin(), s.end(), 'a'), s.end());
+	return s;
+}
+
 int UpdateTime_Int(const string time)
 {
 	return atoi(time.substr(0, 2).c_str()) * 3600 + atoi(time.substr(3, 2).c_str()) * 60 + atoi(time.substr(6, 2).c_str());
+}
+
+string replace(std::string& str, const std::string& from, const std::string& to) {
+	size_t start_pos = str.find(from);
+	if (start_pos == std::string::npos)
+		return false;
+	str.replace(start_pos, from.length(), to);
+	return str;
+}
+
+string replaceAll(std::string& str, const std::string& from, const std::string& to) {
+	if (from.empty())
+		return str;
+	size_t start_pos = 0;
+	while ((start_pos = str.find(from, start_pos)) != std::string::npos) {
+		str.replace(start_pos, from.length(), to);
+		start_pos += to.length(); // In case 'to' contains 'from', like replacing 'x' with 'yx'
+	}
+	return str;
+}
+
+vector<char*> StringSplit(char* splittingstring)
+{
+	vector<char*> list;
+	char *token = strtok(splittingstring, ",");
+	while (token != NULL){
+		list.push_back(token);
+		token = strtok(NULL, ",");
+	}
+	return list;
+}
+
+void SplitString(const string& s, vector<string>& v, const string& c)
+{
+	string::size_type pos1, pos2;
+	pos2 = s.find(c);
+	pos1 = 0;
+	while (string::npos != pos2)
+	{
+		v.push_back(s.substr(pos1, pos2 - pos1));
+
+		pos1 = pos2 + c.size();
+		pos2 = s.find(c, pos1);
+	}
+	if (pos1 != s.length())
+		v.push_back(s.substr(pos1));
 }

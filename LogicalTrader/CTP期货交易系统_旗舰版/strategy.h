@@ -31,7 +31,7 @@ public:
 	void OnTickData(CThostFtdcDepthMarketDataField *pDepthMarketData);
 
 	//设置交易的合约代码
-	void Init(string strategyType, string instId, string exePath, int kdbPort, string kdbScript, int strategyVolumeTarget, string strategykdbscript, double par1, double par2, double par3, double par4, double par5, double par6, int strategyOrderType1, int strategyOrderTyep2, int strategyOrderType3, int strategyOrderType4, int strategyOrderType5, int strategyOrderType6, string strategyPairLeg1Symbol, string strategyPairLeg2Symbol, string strategyPairLeg3Symbol);
+	void Init(string strategyType, string instIddecoration, string instId, string exePath, int kdbPort, string kdbScript, int strategyVolumeTarget, string strategykdbscript, double par1, double par2, double par3, double par4, double par5, double par6, int strategyOrderType1, int strategyOrderTyep2, int strategyOrderType3, int strategyOrderType4, int strategyOrderType5, int strategyOrderType6, string strategyPairLeg1Symbol, string strategyPairLeg2Symbol, string strategyPairLeg3Symbol);
 	
 	//策略主逻辑的计算，70条行情里涨了0.6元，则做多，下跌则做空（系统默认禁止开仓，可在界面输入"yxkc"来允许开仓）
 	void StrategyCalculate(CThostFtdcDepthMarketDataField *pDepthMarketData);
@@ -56,6 +56,9 @@ public:
 
 	//存数据到kdb
 	void DataInsertToKDB(CThostFtdcDepthMarketDataField *pDepthMarketData);
+
+	//3M数据到kdb
+	void Data3MInsertToKDB(vector<string> v_product, CThostFtdcDepthMarketDataField *pDepthMarketData, int mode);
 	
 	//检查需要换月的仓位并换
 	void MaintainContract(CThostFtdcDepthMarketDataField *pDepthMarketData, TThostFtdcInstrumentIDType m_instId);
@@ -72,9 +75,13 @@ public:
 	//根据当前KDB数据库最新数据检查是否在
 	bool Strategy::IsMarketOpen(CThostFtdcDepthMarketDataField *pDepthMarketData);
 
+	void Strategy::Set_CThostFtdcDepthMarketDataField(CThostFtdcDepthMarketDataField *pDepthMarketData);
+
 private:
 
 	CtpTraderSpi* TDSpi_stgy;//TD指针
+
+	TThostFtdcInstrumentIDSubscribeType m_instIddecoration;//合约代码
 
 	TThostFtdcInstrumentIDSubscribeType m_instId;//合约代码
 
@@ -91,6 +98,10 @@ private:
 	double m_closeProfit_account;//整个账户的平仓盈亏
 
 	vector<History_data> history_data_vec;//保存历史数据的vector
+
+	map<string, string> m_instIddecoration_instId;//CThostFtdcInputOrderField
+
+	map<string, pMarketData_message*> m_pMarketData_map;//保存自定义的价格信息的map服务于追单
 	
 };
 

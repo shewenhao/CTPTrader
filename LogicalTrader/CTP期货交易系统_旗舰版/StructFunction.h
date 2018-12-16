@@ -131,7 +131,18 @@ void ReadDatas(string fileName, vector<History_data> &history_data_vec);
 
 int Store_fileName(string path, vector<string> &FileName);
 
-string String_StripNum(string);
+string String_StripNum(string s);
+
+string String_StripChar(string s);
 
 int UpdateTime_Int(const string time);
+
+string replace(std::string& str, const std::string& from, const std::string& to);
+
+string replaceAll(std::string& str, const std::string& from, const std::string& to);
+
+vector<char*> StringSplit(char* splittingstring);
+
+void SplitString(const string& s, vector<string>& v, const string& c);
+
 #endif
